@@ -5,12 +5,15 @@ import Node from './components/Node';
 import ConnectionLayer from './components/ConnectionLayer';
 import Notebook from './components/Notebook';
 import ContextMenu from './components/ContextMenu';
+import CaseManager from './components/CaseManager'; // ★追加
 
 function App() {
   const {
-    nodes, edges, view, menu, keywords, isNotebookOpen, editingId, selectedIds, connectionDraft, selectionBox, fileInputRef,
+    nodes, edges, view, menu, keywords, isNotebookOpen, editingId, selectedIds, connectionDraft, selectionBox, fileInputRef, saveStatus,
     handleWheel, handleBoardMouseDown, handleBoardContextMenu, handleMouseMove, handleMouseUp,
-    notebookActions, nodeActions, menuAction, handleImageUpload
+    notebookActions, nodeActions, menuAction, handleImageUpload,
+    // ★追加
+    isCaseManagerOpen, currentCaseId, caseList, caseActions
   } = useDetectiveBoard();
 
   return (
@@ -20,6 +23,43 @@ function App() {
     >
       <input type="file" ref={fileInputRef} style={{display: 'none'}} accept="image/*" onChange={handleImageUpload} />
       
+      <div style={{
+        color: 'white',
+        fontSize: '0.8rem',
+        position: 'absolute',
+        top: '10px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 10,
+        padding: '2px 8px',
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        borderRadius: '10px',
+        pointerEvents: 'none'
+      }}>
+        {saveStatus === 'saving' && '💾 Saving...'}
+        {saveStatus === 'saved' && '✅ Saved'}
+        {saveStatus === 'error' && '❌ Error!'}
+      </div>
+
+      {/* ツールバー */}
+      <div className="toolbar">
+        {/* ツールバーのボタンはCaseManagerとNotebookに内蔵するUIに変えたため、空にしています */}
+      </div>
+
+      {/* Case Manager (サイドバー) */}
+      <CaseManager 
+        isOpen={isCaseManagerOpen}
+        onToggleOpen={caseActions.toggleOpen}
+        cases={caseList}
+        currentCaseId={currentCaseId}
+        onOpenCase={caseActions.openCase}
+        onCreateCase={caseActions.createCase}
+        onDeleteCase={caseActions.deleteCase}
+        onRenameCase={caseActions.renameCase}
+      />
+
+      {/* Notebook (サイドバー) */}
+      {/* CaseManagerとボタンが被らないように、少し位置をずらすスタイルを適用する必要があります */}
       <Notebook 
         isOpen={isNotebookOpen} onToggleOpen={notebookActions.toggleOpen}
         keywords={keywords} onAddKeyword={notebookActions.addKeyword} onDeleteKeyword={notebookActions.deleteKeyword} onToggleKeyword={notebookActions.toggleKeyword}
@@ -36,8 +76,7 @@ function App() {
         {nodes.map(node => (
           <Node
             key={node.id} node={node}
-            isSelected={selectedIds.has(node.id)}
-            isEditing={editingId === node.id}
+            isSelected={selectedIds.has(node.id)} isEditing={editingId === node.id}
             keywords={keywords}
             onMouseDown={nodeActions.onMouseDown} onContextMenu={nodeActions.onContextMenu} onDoubleClick={nodeActions.onDoubleClick}
             onPinMouseDown={nodeActions.onPinMouseDown} onPinMouseUp={nodeActions.onPinMouseUp}
