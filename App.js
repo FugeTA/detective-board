@@ -13,6 +13,8 @@ function App() {
     nodes, edges, view, menu, keywords, isNotebookOpen, editingId, selectedIds, connectionDraft, selectionBox, fileInputRef, saveStatus,
     isCaseManagerOpen, currentCaseId, caseList,
     drawings, currentDrawing, isDrawingMode, // ★描画state
+    isSpacePressed, isPanning,
+    dragInfo,
     handleWheel, handleBoardMouseDown, handleBoardContextMenu, handleMouseMove, handleMouseUp,
     notebookActions, nodeActions, menuAction, handleImageUpload, caseActions, drawingActions, // ★描画アクション
   } = useDetectiveBoard();
@@ -20,7 +22,12 @@ function App() {
   return (
     <div className={`board ${isDrawingMode ? 'drawing-mode' : ''}`}
       onMouseDown={handleBoardMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onWheel={handleWheel} onContextMenu={handleBoardContextMenu}
-      style={{ backgroundImage: 'radial-gradient(#444 1px, transparent 1px)', backgroundSize: `${20 * view.scale}px ${20 * view.scale}px`, backgroundPosition: `${view.x}px ${view.y}px` }}
+      style={{ 
+        backgroundImage: 'radial-gradient(#444 1px, transparent 1px)', 
+        backgroundSize: `${20 * view.scale}px ${20 * view.scale}px`, 
+        backgroundPosition: `${view.x}px ${view.y}px`,
+        cursor: isPanning ? 'grabbing' : (isSpacePressed ? 'grab' : (dragInfo?.type === 'move' ? 'move' : undefined))
+      }}
     >
       <input type="file" ref={fileInputRef} style={{display: 'none'}} accept="image/*" onChange={handleImageUpload} />
       
@@ -101,6 +108,8 @@ function App() {
             key={node.id} node={node}
             isSelected={selectedIds.has(node.id)} isEditing={editingId === node.id}
             keywords={keywords}
+            isSpacePressed={isSpacePressed}
+            isDragging={dragInfo?.type === 'move'}
             onMouseDown={nodeActions.onMouseDown} onContextMenu={nodeActions.onContextMenu} onDoubleClick={nodeActions.onDoubleClick}
             onPinMouseDown={nodeActions.onPinMouseDown} onPinMouseUp={nodeActions.onPinMouseUp}
             onRotateMouseDown={nodeActions.onRotateMouseDown} onRotateReset={nodeActions.onRotateReset}

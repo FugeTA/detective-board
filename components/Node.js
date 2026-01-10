@@ -22,6 +22,8 @@ const Node = ({
   isSelected, 
   isEditing, 
   keywords,
+  isSpacePressed,
+  isDragging,
   // イベントハンドラ
   onMouseDown, 
   onContextMenu, 
@@ -44,7 +46,8 @@ const Node = ({
         opacity: node.type === 'frame' ? 0.5 : 1,
         border: isSelected ? '2px solid #2196f3' : (node.type === 'frame' ? '2px dashed #ccc' : '1px solid #ccc'),
         boxShadow: isSelected ? '0 0 8px rgba(33, 150, 243, 0.5)' : 'none',
-        zIndex: isSelected ? 1000 : (node.type === 'frame' ? 0 : 10)
+        zIndex: (node.type === 'frame' ? 0 : 100) + (isSelected ? 50 : 0),
+        cursor: isSpacePressed ? 'grab' : (isDragging ? 'move' : 'default')
       }}
       onMouseDown={(e) => onMouseDown(e, node)}
       onContextMenu={(e) => onContextMenu(e, node)}

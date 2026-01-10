@@ -62,10 +62,12 @@ export const useDetectiveBoard = () => {
   const [penColor, setPenColor] = useState('#000000'); // ペンの色
   const [drawingTool, setDrawingTool] = useState('pen'); // 'pen' or 'eraser'
   const [isErasing, setIsErasing] = useState(false);
+  const [isSpacePressed, setIsSpacePressed] = useState(false);
   
   const fileInputRef = useRef(null);
   const [history, setHistory] = useState([]);
   const snapshotRef = useRef(null);
+  const mouseDownData = useRef(null); // ドラッグ開始判定用
 
   // --- 初期化 ---
   useEffect(() => {
@@ -126,6 +128,19 @@ export const useDetectiveBoard = () => {
     setDrawings(lastState.drawings); // ★描画もUndo
     setSelectedIds(new Set());
   }, [history]);
+
+  // スペースキーの状態監視
+  useEffect(() => {
+    const handleSpaceDown = (e) => {
+      if (e.code === 'Space' && !e.repeat) setIsSpacePressed(true);
+    };
+    const handleSpaceUp = (e) => {
+      if (e.code === 'Space') setIsSpacePressed(false);
+    };
+    window.addEventListener('keydown', handleSpaceDown);
+    window.addEventListener('keyup', handleSpaceUp);
+    return () => { window.removeEventListener('keydown', handleSpaceDown); window.removeEventListener('keyup', handleSpaceUp); };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -269,6 +284,7 @@ export const useDetectiveBoard = () => {
 
   // --- Main Board Handlers ---
   const handleWheel = (e) => {
+    setMenu(null);
     if (isDrawingMode) { e.preventDefault(); return; } // 描画中はズームしない
     e.preventDefault();
     const d = -e.deltaY * 0.001;
@@ -295,6 +311,15 @@ export const useDetectiveBoard = () => {
   const handleBoardMouseDown = (e) => {
     if (e.button === 2) return;
 
+    // パン移動 (中クリック or スペース+左クリック)
+    if (e.button === 1 || (e.button === 0 && isSpacePressed)) {
+      e.preventDefault();
+      setMenu(null);
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - view.x, y: e.clientY - view.y });
+      return;
+    }
+
     // ★描画モードの処理
     if (isDrawingMode) {
       e.stopPropagation();
@@ -314,36 +339,34 @@ export const useDetectiveBoard = () => {
     }
 
     setEditingId(null); setMenu(null);
-    if (e.shiftKey) {
-      const worldX = (e.clientX - view.x) / view.scale;
-      const worldY = (e.clientY - view.y) / view.scale;
-      setSelectionBox({ startX: worldX, startY: worldY, curX: worldX, curY: worldY });
-    } else {
-      // 線の選択判定
-      const worldX = (e.clientX - view.x) / view.scale;
-      const worldY = (e.clientY - view.y) / view.scale;
-      const hitThreshold = 10 / view.scale;
-      let hitDrawing = null;
-      // 上にあるもの（配列の後ろ）から判定
-      for (let i = drawings.length - 1; i >= 0; i--) {
-        if (isPointNearDrawing(worldX, worldY, drawings[i], hitThreshold)) {
-          hitDrawing = drawings[i];
-          break;
-        }
-      }
 
-      if (hitDrawing) {
-        e.stopPropagation();
-        if (!selectedIds.has(hitDrawing.id)) {
-          setSelectedIds(new Set([hitDrawing.id]));
-        }
-        snapshotRef.current = { nodes, edges, drawings };
-        setDragInfo({ type: 'move', id: hitDrawing.id, startX: e.clientX, startY: e.clientY });
-        return;
+    // 線の選択判定
+    const worldX = (e.clientX - view.x) / view.scale;
+    const worldY = (e.clientY - view.y) / view.scale;
+    const hitThreshold = 10 / view.scale;
+    let hitDrawing = null;
+    // 上にあるもの（配列の後ろ）から判定
+    for (let i = drawings.length - 1; i >= 0; i--) {
+      if (isPointNearDrawing(worldX, worldY, drawings[i], hitThreshold)) {
+        hitDrawing = drawings[i];
+        break;
       }
+    }
 
+    if (hitDrawing) {
+      e.stopPropagation();
+      if (!selectedIds.has(hitDrawing.id)) {
+        setSelectedIds(new Set([hitDrawing.id]));
+      }
+      snapshotRef.current = { nodes, edges, drawings };
+      setDragInfo({ type: 'move', id: hitDrawing.id, startX: e.clientX, startY: e.clientY });
+      return;
+    }
+
+    // 範囲選択 (デフォルトの左ドラッグ)
+    setSelectionBox({ startX: worldX, startY: worldY, curX: worldX, curY: worldY });
+    if (!e.shiftKey) {
       setSelectedIds(new Set());
-      setIsPanning(true); setPanStart({ x: e.clientX - view.x, y: e.clientY - view.y });
     }
   };
 
@@ -379,6 +402,8 @@ export const useDetectiveBoard = () => {
   };
 
   const handleMouseMove = (e) => {
+    if (isPanning) { setView({ ...view, x: e.clientX - panStart.x, y: e.clientY - panStart.y }); return; }
+
     // ★描画中の処理
     if (isDrawingMode) {
       if (isErasing) {
@@ -396,7 +421,16 @@ export const useDetectiveBoard = () => {
       setSelectionBox(prev => ({ ...prev, curX: worldX, curY: worldY }));
       return;
     }
-    if (isPanning) { setView({ ...view, x: e.clientX - panStart.x, y: e.clientY - panStart.y }); return; }
+
+    // ドラッグ開始判定（閾値を超えたらドラッグ開始）
+    if (mouseDownData.current && !dragInfo) {
+      const moveDist = Math.hypot(e.clientX - mouseDownData.current.startX, e.clientY - mouseDownData.current.startY);
+      if (moveDist > 5) {
+        setDragInfo(mouseDownData.current);
+        mouseDownData.current = null;
+      }
+    }
+
     if (dragInfo) {
       if (!snapshotRef.current) return; // Add a guard clause
       const worldMouseX = (e.clientX - view.x) / view.scale;
@@ -449,6 +483,13 @@ export const useDetectiveBoard = () => {
   };
 
   const handleMouseUp = (e) => {
+    mouseDownData.current = null; // ドラッグ未成立で終了した場合のクリア
+
+    if (isPanning) {
+      setIsPanning(false);
+      return;
+    }
+
     // ★描画完了の処理
     if (isDrawingMode) {
       if (isErasing) {
@@ -482,7 +523,6 @@ export const useDetectiveBoard = () => {
       setSelectionBox(null);
       return;
     }
-    setIsPanning(false);
     if (dragInfo && snapshotRef.current) {
       const pastState = snapshotRef.current;
       pushSpecificHistory(pastState.nodes, pastState.edges, pastState.drawings);
@@ -525,6 +565,7 @@ export const useDetectiveBoard = () => {
 
   const nodeActions = {
     onMouseDown: (e, node) => {
+      if (isSpacePressed || e.button === 1) return; // パン移動のためにバブリングさせる
       if (isDrawingMode) return;
       e.stopPropagation();
       setMenu(null);
@@ -534,8 +575,10 @@ export const useDetectiveBoard = () => {
       }
       if (!selectedIds.has(node.id)) setSelectedIds(new Set([node.id]));
       if (editingId === node.id) return;
+
+      // ドラッグ準備（まだカーソルは変えない）
       snapshotRef.current = { nodes, edges, drawings };
-      setDragInfo({ type: 'move', id: node.id, startX: e.clientX, startY: e.clientY, initialNode: { ...node } });
+      mouseDownData.current = { type: 'move', id: node.id, startX: e.clientX, startY: e.clientY, initialNode: { ...node } };
     },
     onContextMenu: (e, node) => {
       e.preventDefault(); e.stopPropagation(); 
@@ -546,6 +589,7 @@ export const useDetectiveBoard = () => {
     },
     onDoubleClick: (e, id) => { e.stopPropagation(); snapshotRef.current = { nodes, edges, drawings }; setEditingId(id); },
     onPinMouseDown: (e, id) => {
+      if (isSpacePressed || e.button === 1) return;
       if (isDrawingMode) return;
       e.stopPropagation(); e.preventDefault(); setMenu(null);
       const node = nodes.find(n => n.id === id);
@@ -560,6 +604,7 @@ export const useDetectiveBoard = () => {
       setConnectionDraft(null);
     },
     onRotateMouseDown: (e, node) => {
+      if (isSpacePressed || e.button === 1) return;
       if (isDrawingMode) return;
       e.stopPropagation(); e.preventDefault(); snapshotRef.current = { nodes, edges, drawings };
       setMenu(null);
@@ -569,6 +614,7 @@ export const useDetectiveBoard = () => {
     },
     onRotateReset: (e, id) => { e.stopPropagation(); pushHistory(); setNodes(prev => prev.map(n => n.id === id ? { ...n, rotation: 0 } : n)); },
     onResizeMouseDown: (e, node) => {
+      if (isSpacePressed || e.button === 1) return;
       if (isDrawingMode) return;
       e.stopPropagation(); snapshotRef.current = { nodes, edges, drawings };
       setMenu(null);
@@ -698,6 +744,8 @@ export const useDetectiveBoard = () => {
     isNotebookOpen, isCaseManagerOpen,
     currentCaseId, caseList,
     drawings: drawings.map(d => ({ ...d, selected: selectedIds.has(d.id) })), currentDrawing, isDrawingMode, penColor, drawingTool, // ★描画用state
+    isSpacePressed, isPanning,
+    dragInfo,
     handleWheel, handleBoardMouseDown, handleBoardContextMenu, handleMouseMove, handleMouseUp,
     notebookActions, nodeActions, menuAction, caseActions, handleImageUpload, drawingActions, // ★描画アクション
   };
