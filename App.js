@@ -17,7 +17,7 @@ function App() {
     dragInfo,
     fullscreenImage, setFullscreenImage,
     handleWheel, handleBoardMouseDown, handleBoardContextMenu, handleMouseMove, handleMouseUp, handleDragOver, handleDrop,
-    notebookActions, nodeActions, menuAction, handleImageUpload, caseActions, drawingActions, // ★描画アクション
+    notebookActions, nodeActions, edgeActions, menuAction, handleImageUpload, caseActions, drawingActions, // ★描画アクション
   } = useDetectiveBoard();
 
   return (
@@ -92,7 +92,12 @@ function App() {
       />
 
       <div className="transform-layer" style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}>
-        <ConnectionLayer edges={edges} nodes={nodes} connectionDraft={connectionDraft} menu={menu} />
+        <ConnectionLayer 
+          edges={edges} nodes={nodes} connectionDraft={connectionDraft} menu={menu} 
+          selectedIds={selectedIds}
+          onEdgeMouseDown={edgeActions.onMouseDown}
+          onEdgeContextMenu={edgeActions.onContextMenu}
+        />
         
         {/* ★描画レイヤーをここに追加 */}
         <DrawingLayer drawings={drawings} currentDrawing={currentDrawing} scale={view.scale} />

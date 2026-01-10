@@ -5,7 +5,14 @@ export const getPinLocation = (node) => {
   const cx = node.x + node.width / 2;
   const cy = node.y + node.height / 2;
   const rad = (node.rotation || 0) * (Math.PI / 180);
-  const pinDist = (node.height / 2) + 7; 
+  
+  // ピンノードの場合は中心を返す
+  if (node.type === 'pin') return { x: cx, y: cy };
+
+  // フレームの場合はピンの位置が内側（ヘッダー付近）にあるため調整
+  const offset = node.type === 'frame' ? -15 : 7;
+  const pinDist = (node.height / 2) + offset; 
+
   return {
     x: cx + Math.sin(rad) * pinDist,
     y: cy - Math.cos(rad) * pinDist

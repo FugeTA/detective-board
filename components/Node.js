@@ -54,14 +54,15 @@ const Node = ({
       style={{ 
         left: node.x, top: node.y, width: node.width, height: node.height,
         transform: `rotate(${node.rotation || 0}deg)`,
-        backgroundColor: node.color,
+        background: node.color,
         color: node.textColor || '#000000',
         fontSize: node.fontSize || '16px',
         opacity: node.type === 'frame' ? 0.5 : 1,
-        border: isSelected ? '2px solid #2196f3' : (node.type === 'frame' ? '2px dashed #ccc' : '1px solid #ccc'),
+        border: isSelected ? '1px solid #2196f3' : (node.type === 'frame' ? '2px dashed #ccc' : (node.type === 'pin' ? '2px solid rgba(0,0,0,0.2)' : '1px solid #ccc')),
+        borderRadius: node.type === 'pin' ? '50%' : (node.type === 'frame' ? '4px' : '2px'),
         boxShadow: isSelected ? '0 0 8px rgba(33, 150, 243, 0.5)' : 'none',
         zIndex: (node.type === 'frame' ? 0 : 100) + (isSelected ? 50 : 0),
-        cursor: isSpacePressed ? 'grab' : (isDragging ? 'move' : 'default')
+        cursor: isSpacePressed ? 'grab' : (isDragging ? 'move' : (node.type === 'pin' ? 'move' : 'default'))
       }}
       onMouseDown={(e) => onMouseDown(e, node)}
       onContextMenu={(e) => onContextMenu(e, node)}
@@ -71,16 +72,27 @@ const Node = ({
         className="pin" 
         onMouseDown={(e) => onPinMouseDown(e, node.id)} 
         onMouseUp={(e) => onPinMouseUp(e, node.id)}
+        style={{ 
+          fontSize: '16px',
+          // ピンノードの場合は接続ハンドルを中心に配置
+          ...(node.type === 'pin' ? { 
+            top: '50%', left: '50%', transform: 'translate(-50%, -50%)', 
+            cursor: 'crosshair',
+          } : {})
+        }}
       ></div>
       
-      <div 
-        className="rotate-handle" 
-        onMouseDown={(e) => onRotateMouseDown(e, node)} 
-        onDoubleClick={(e) => onRotateReset(e, node.id)} 
-        title="Drag to rotate, Double-click to reset"
-      >↻</div>
+      {node.type !== 'pin' && (
+        <div 
+          className="rotate-handle" 
+          onMouseDown={(e) => onRotateMouseDown(e, node)} 
+          onDoubleClick={(e) => onRotateReset(e, node.id)} 
+          title="Drag to rotate, Double-click to reset"
+          style={{ fontSize: '16px' }}
+        >↻</div>
+      )}
       
-      <div className="resize-handle" onMouseDown={(e) => onResizeMouseDown(e, node)} ></div>
+      {node.type !== 'pin' && <div className="resize-handle" onMouseDown={(e) => onResizeMouseDown(e, node)} ></div>}
 
       {node.type === 'photo' && (
         <div 
@@ -182,7 +194,7 @@ const Node = ({
             resize: 'none' 
           }} 
         />
-      ) : !isMediaNode && (
+      ) : !isMediaNode && node.type !== 'pin' && (
         <div style={{
           flex: (node.type === 'note' || node.type === 'link') ? 1 : 'none', 
           whiteSpace: 'pre-wrap', 

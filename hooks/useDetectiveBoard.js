@@ -71,7 +71,7 @@ export const useDetectiveBoard = () => {
         if (selectedIds.size > 0) {
           e.preventDefault(); pushHistory();
           setNodes(prev => prev.filter(n => !selectedIds.has(n.id)));
-          setEdges(prev => prev.filter(edge => !selectedIds.has(edge.from) && !selectedIds.has(edge.to)));
+          setEdges(prev => prev.filter(edge => !selectedIds.has(edge.from) && !selectedIds.has(edge.to) && !selectedIds.has(edge.id)));
           setDrawings(prev => prev.filter(d => !selectedIds.has(d.id)));
           setSelectedIds(new Set());
         }
@@ -174,9 +174,12 @@ export const useDetectiveBoard = () => {
     onDoubleClick: (e, id) => { 
       e.stopPropagation(); 
       const node = nodes.find(n => n.id === id);
-      if (node && node.type === 'photo' && node.imageSrc) {
-        setFullscreenImage(node.imageSrc);
-        return;
+      if (node) {
+        if (node.type === 'pin') return; // ピンは編集しない
+        if (node.type === 'photo' && node.imageSrc) {
+          setFullscreenImage(node.imageSrc);
+          return;
+        }
       }
       snapshotRef.current = { nodes, edges, drawings }; setEditingId(id); 
     },
@@ -192,7 +195,7 @@ export const useDetectiveBoard = () => {
       if (isDrawingMode) return;
       e.stopPropagation();
       setMenu(null);
-      if (connectionDraft && connectionDraft.sourceId !== id) { setEdges([...edges, { from: connectionDraft.sourceId, to: id }]); }
+      if (connectionDraft && connectionDraft.sourceId !== id) { setEdges([...edges, { id: `edge-${Date.now()}`, from: connectionDraft.sourceId, to: id }]); }
       setConnectionDraft(null);
     },
     onRotateMouseDown: (e, node) => {
@@ -223,6 +226,31 @@ export const useDetectiveBoard = () => {
     }
   };
 
+  const edgeActions = {
+    onMouseDown: (e, edgeId) => {
+      if (isDrawingMode) return;
+      e.stopPropagation();
+      setMenu(null);
+      if (!selectedIds.has(edgeId)) setSelectedIds(new Set([edgeId]));
+    },
+    onContextMenu: (e, edgeId) => {
+      e.preventDefault(); e.stopPropagation();
+      if (!selectedIds.has(edgeId)) {
+        setSelectedIds(new Set([edgeId]));
+      }
+      const edge = edges.find(e => e.id === edgeId);
+      setMenu({ 
+        type: 'edge', 
+        targetId: edgeId, 
+        left: e.clientX, 
+        top: e.clientY, 
+        worldX: (e.clientX - view.x) / view.scale, 
+        worldY: (e.clientY - view.y) / view.scale, 
+        currentColor: edge ? edge.color : null 
+      });
+    }
+  };
+
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file || !menu || menu.type !== 'node') return;
@@ -250,17 +278,29 @@ export const useDetectiveBoard = () => {
       let newNode;
       if (payload === 'frame') {
         newNode = { id: newId, x: menu.worldX, y: menu.worldY, width: 400, height: 300, type: 'frame', content: 'Group', imageSrc: null, rotation: 0, parentId: null, textColor: '#ffffff' };
+      } else if (payload === 'pin') {
+        newNode = { id: newId, x: menu.worldX - 15, y: menu.worldY - 15, width: 30, height: 30, type: 'pin', content: '', imageSrc: null, rotation: 0, parentId: null, };
       } else {
         newNode = { id: newId, x: menu.worldX, y: menu.worldY, width: 180, height: payload === 'photo' ? 220 : 150, type: payload, content: '', imageSrc: null, rotation: (Math.random() * 30) - 15, parentId: null };
       }
       setNodes([...nodes, newNode]);
-      if (menu.type === 'connection') { setEdges([...edges, { from: menu.sourceId, to: newNode.id }]); }
-      setEditingId(newId); setSelectedIds(new Set([newId]));
+      if (menu.type === 'connection') { 
+        setEdges([...edges, { id: `edge-${Date.now()}`, from: menu.sourceId, to: newNode.id }]); 
+      } else if (menu.type === 'edge') {
+        const originalEdge = edges.find(e => e.id === menu.targetId);
+        if (originalEdge) {
+          const edge1 = { ...originalEdge, id: `edge-${Date.now()}-1`, to: newNode.id };
+          const edge2 = { ...originalEdge, id: `edge-${Date.now()}-2`, from: newNode.id };
+          setEdges(prev => [...prev.filter(e => e.id !== menu.targetId), edge1, edge2]);
+        }
+      }
+      if (payload !== 'pin') setEditingId(newId);
+      setSelectedIds(new Set([newId]));
     } 
     else if (action === 'delete') { 
       pushHistory();
       const targets = selectedIds.has(menu.targetId) ? selectedIds : new Set([menu.targetId]);
-      setNodes(nodes.filter(n => !targets.has(n.id))); setEdges(edges.filter(e => !targets.has(e.from) && !targets.has(e.to)));
+      setNodes(nodes.filter(n => !targets.has(n.id))); setEdges(edges.filter(e => !targets.has(e.from) && !targets.has(e.to) && !targets.has(e.id)));
       setDrawings(drawings.filter(d => !targets.has(d.id)));
       setSelectedIds(new Set());
     }
@@ -333,6 +373,19 @@ export const useDetectiveBoard = () => {
       setMenu(prev => ({ ...prev, currentFontSize: payload || '16px' }));
       return;
     }
+    else if (action === 'changeEdgeColor') {
+      pushHistory();
+      const targets = selectedIds.has(menu.targetId) ? selectedIds : new Set([menu.targetId]);
+      setEdges(prev => prev.map(e => targets.has(e.id) ? { ...e, color: payload } : e));
+      setMenu(prev => ({ ...prev, currentColor: payload }));
+      return;
+    }
+    else if (action === 'changeEdgeStyle') {
+      pushHistory();
+      const targets = selectedIds.has(menu.targetId) ? selectedIds : new Set([menu.targetId]);
+      setEdges(prev => prev.map(e => targets.has(e.id) ? { ...e, style: payload } : e));
+      return;
+    }
     else if (action === 'changePenColor') {
       setPenColor(payload);
       setDrawingTool('pen'); // 色を変えたらペンモードに戻す
@@ -355,6 +408,6 @@ export const useDetectiveBoard = () => {
     dragInfo,
     fullscreenImage, setFullscreenImage,
     handleWheel, handleBoardMouseDown, handleBoardContextMenu, handleMouseMove, handleMouseUp, handleDragOver, handleDrop,
-    notebookActions, nodeActions, menuAction, caseActions, handleImageUpload, drawingActions, // ★描画アクション
+    notebookActions, nodeActions, edgeActions, menuAction, caseActions, handleImageUpload, drawingActions, // ★描画アクション
   };
 };

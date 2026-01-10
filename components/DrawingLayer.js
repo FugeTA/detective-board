@@ -35,7 +35,7 @@ const DrawingLayer = ({ drawings, currentDrawing, scale }) => {
               <path
                 d={createSvgPath(drawing.points)}
                 stroke="rgba(33, 150, 243, 0.5)"
-                strokeWidth={strokeWidth * 4}
+                strokeWidth={strokeWidth * 2}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 fill="none"

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { isPointNearDrawing } from '../utils/geometry';
+import { isPointNearDrawing, lineIntersectsRect } from '../utils/geometry';
+import { getPinLocationById } from '../utils/math';
 
 export const useBoardInteraction = ({
   view, setView,
@@ -228,6 +229,16 @@ export const useBoardInteraction = ({
         const cx = node.x + node.width / 2;
         const cy = node.y + node.height / 2;
         if (cx >= x1 && cx <= x2 && cy >= y1 && cy <= y2) newSelectedIds.add(node.id);
+      });
+      // エッジの範囲選択
+      edges.forEach(edge => {
+        const s = getPinLocationById(nodes, edge.from);
+        const e = getPinLocationById(nodes, edge.to);
+        if (s.x && e.x) {
+           if (lineIntersectsRect(s, e, {x: x1, y: y1, width: x2-x1, height: y2-y1})) {
+             newSelectedIds.add(edge.id);
+           }
+        }
       });
       // 手書き線の範囲選択
       drawings.forEach(d => {

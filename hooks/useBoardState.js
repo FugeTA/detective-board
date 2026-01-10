@@ -37,7 +37,7 @@ export const useBoardState = () => {
 
   const loadData = useCallback((data) => {
     setNodes(data.nodes || []);
-    setEdges(data.edges || []);
+    setEdges((data.edges || []).map(e => e.id ? e : { ...e, id: `edge-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` }));
     setKeywords(data.keywords || []);
     setDrawings(data.drawings || []);
     setView(data.view || { x: 0, y: 0, scale: 1 });

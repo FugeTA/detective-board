@@ -30,6 +30,7 @@ const ContextMenu = ({ menu, onAction, selectedIds }) => {
           <div style={{padding:'4px 12px', color:'#888', fontSize:'0.75rem'}}>New Evidence</div>
           <button onClick={() => onAction('addNode', 'note')}>📝 Note</button>
           <button onClick={() => onAction('addNode', 'photo')}>📷 Photo</button>
+          <button onClick={() => onAction('addNode', 'pin')}>📍 Pin</button>
           <button onClick={() => onAction('addNode', 'frame')}>🖼️ Frame</button>
         </>
       )}
@@ -37,21 +38,22 @@ const ContextMenu = ({ menu, onAction, selectedIds }) => {
       {/* ノードを右クリックした時 */}
       {menu.type === 'node' && (
         <>
-          {menu.nodeType !== 'drawing' && <button onClick={() => onAction('edit')}>✏️ Edit Text</button>}
+          {menu.nodeType !== 'drawing' && menu.nodeType !== 'pin' && <button onClick={() => onAction('edit')}>✏️ Edit Text</button>}
           {menu.nodeType === 'photo' && (
              <button onClick={() => onAction('changePhoto')}>🖼 Change Image</button>
           )}
           <div className="menu-divider"></div>
-          {menu.nodeType !== 'drawing' && <div style={{padding:'4px 12px', color:'#888', fontSize:'0.75rem'}}>Background</div>}
+          {menu.nodeType !== 'drawing' && menu.nodeType !== 'pin' && <div style={{padding:'4px 12px', color:'#888', fontSize:'0.75rem'}}>Background</div>}
+          {menu.nodeType === 'pin' && <div style={{padding:'4px 12px', color:'#888', fontSize:'0.75rem'}}>Pin Color</div>}
           <div style={{ padding: '8px 12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {(menu.nodeType === 'drawing' ? penColors : colors).map(c => (
+            {((menu.nodeType === 'drawing' || menu.nodeType === 'pin') ? penColors : colors).map(c => (
               <div 
                 key={c}
                 onClick={() => onAction('changeColor', c)}
                 style={{
                   width: '20px', height: '20px', borderRadius: '50%', 
                   backgroundColor: c, 
-                  border: menu.currentColor === c ? '2px solid #2196f3' : '1px solid #ddd', 
+                  border: menu.currentColor === c ? '1px solid #2196f3' : '1px solid #ddd', 
                   cursor: 'pointer', transform: menu.currentColor === c ? 'scale(1.1)' : 'none'
                 }}
               />
@@ -60,7 +62,7 @@ const ContextMenu = ({ menu, onAction, selectedIds }) => {
               onClick={() => onAction('changeColor', undefined)}
               style={{
                 width: '20px', height: '20px', borderRadius: '50%', 
-                backgroundColor: 'transparent', border: !menu.currentColor ? '2px solid #2196f3' : '1px dashed #888', cursor: 'pointer',
+                backgroundColor: 'transparent', border: !menu.currentColor ? '1px solid #2196f3' : '1px dashed #888', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#555',
                 transform: !menu.currentColor ? 'scale(1.1)' : 'none'
               }}
@@ -68,7 +70,7 @@ const ContextMenu = ({ menu, onAction, selectedIds }) => {
             >✕</div>
           </div>
 
-          {menu.nodeType !== 'drawing' && (
+          {menu.nodeType !== 'drawing' && menu.nodeType !== 'pin' && (
             <>
               <div style={{padding:'4px 12px', color:'#888', fontSize:'0.75rem'}}>Text</div>
               <div style={{ padding: '8px 12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -79,7 +81,7 @@ const ContextMenu = ({ menu, onAction, selectedIds }) => {
                     style={{
                       width: '20px', height: '20px', borderRadius: '50%', 
                       backgroundColor: c, 
-                      border: menu.currentTextColor === c ? '2px solid #2196f3' : '1px solid #ddd', 
+                      border: menu.currentTextColor === c ? '1px solid #2196f3' : '1px solid #ddd', 
                       cursor: 'pointer', transform: menu.currentTextColor === c ? 'scale(1.1)' : 'none'
                     }}
                   />
@@ -88,7 +90,7 @@ const ContextMenu = ({ menu, onAction, selectedIds }) => {
                   onClick={() => onAction('changeTextColor', undefined)}
                   style={{
                     width: '20px', height: '20px', borderRadius: '50%', 
-                    backgroundColor: 'transparent', border: !menu.currentTextColor ? '2px solid #2196f3' : '1px dashed #888', cursor: 'pointer',
+                    backgroundColor: 'transparent', border: !menu.currentTextColor ? '1px solid #2196f3' : '1px dashed #888', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#555',
                     transform: !menu.currentTextColor ? 'scale(1.1)' : 'none'
                   }}
@@ -128,6 +130,48 @@ const ContextMenu = ({ menu, onAction, selectedIds }) => {
           <button onClick={() => onAction('delete')} style={{color:'#ff6b6b'}}>🗑 Delete</button>
         </>
       )}
+
+      {/* エッジを右クリックした時 */}
+      {menu.type === 'edge' && (
+        <>
+          <div style={{padding:'4px 12px', color:'#888', fontSize:'0.75rem'}}>Line Style</div>
+          <div style={{ padding: '8px 12px', display: 'flex', gap: '8px' }}>
+             <button onClick={() => onAction('changeEdgeStyle', 'solid')}>Solid</button>
+             <button onClick={() => onAction('changeEdgeStyle', 'dashed')}>Dashed</button>
+          </div>
+          <div className="menu-divider"></div>
+          <div style={{padding:'4px 12px', color:'#888', fontSize:'0.75rem'}}>Line Color</div>
+          <div style={{ padding: '8px 12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {penColors.map(c => (
+              <div 
+                key={c}
+                onClick={() => onAction('changeEdgeColor', c)}
+                style={{
+                  width: '20px', height: '20px', borderRadius: '50%', 
+                  backgroundColor: c, 
+                  border: menu.currentColor === c ? '1px solid #2196f3' : '1px solid #ddd', 
+                  cursor: 'pointer', transform: menu.currentColor === c ? 'scale(1.1)' : 'none'
+                }}
+              />
+            ))}
+             <div 
+              onClick={() => onAction('changeEdgeColor', undefined)}
+              style={{
+                width: '20px', height: '20px', borderRadius: '50%', 
+                backgroundColor: 'transparent', border: !menu.currentColor ? '1px solid #2196f3' : '1px dashed #888', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#555',
+                transform: !menu.currentColor ? 'scale(1.1)' : 'none'
+              }}
+              title="Reset Color"
+            >✕</div>
+          </div>
+          <div className="menu-divider"></div>
+          <button onClick={() => onAction('addNode', 'pin')}>📍 Add Pin</button>
+          <div className="menu-divider"></div>
+          <button onClick={() => onAction('delete')} style={{color:'#ff6b6b'}}>🗑 Delete Connection</button>
+        </>
+      )}
+
 
       {/* 描画モード中の右クリック */}
       {menu.type === 'drawing' && (
