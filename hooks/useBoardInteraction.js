@@ -178,8 +178,9 @@ export const useBoardInteraction = ({
                     return { ...node, x: originalNodeState.x + dx, y: originalNodeState.y + dy };
                 }
             } else if (dragInfo.type === 'resize' && node.id === dragInfo.id) {
-                let newWidth = Math.max(100, originalNodeState.width + dx);
-                let newHeight = Math.max(100, originalNodeState.height + dy);
+                const minSize = node.type === 'note' ? 50 : 100;
+                let newWidth = Math.max(minSize, originalNodeState.width + dx);
+                let newHeight = Math.max(minSize, originalNodeState.height + dy);
                 if (e.shiftKey) {
                     const ratio = originalNodeState.width / originalNodeState.height;
                     newHeight = newWidth / ratio;

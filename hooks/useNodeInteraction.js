@@ -99,11 +99,14 @@ export const useNodeInteraction = ({
       setDragInfo({ type: 'resize', id: node.id, startX: e.clientX, startY: e.clientY, initialNode: { ...node } });
     },
     onContentChange: (id, val) => setNodes(nodes.map(n => n.id === id ? { ...n, content: val } : n)),
-    onBlur: () => {
+    onBlur: (id, newHeight) => {
       if (snapshotRef.current) { 
         const pastState = snapshotRef.current;
         pushSpecificHistory(pastState.nodes, pastState.edges, pastState.drawings);
         snapshotRef.current = null;
+      }
+      if (id && newHeight) {
+        setNodes(prev => prev.map(n => n.id === id ? { ...n, height: newHeight } : n));
       }
       setEditingId(null);
     }

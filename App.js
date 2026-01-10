@@ -108,24 +108,26 @@ function App() {
             width: Math.abs(selectionBox.curX - selectionBox.startX), height: Math.abs(selectionBox.curY - selectionBox.startY),
           }} />
         )}
-        {[...nodes].sort((a, b) => {
-          if (a.type === 'frame' && b.type !== 'frame') return -1;
-          if (a.type !== 'frame' && b.type === 'frame') return 1;
-          return 0;
-        }).map(node => (
-          <Node
-            key={node.id} node={node}
-            isSelected={selectedIds.has(node.id)} isEditing={editingId === node.id}
-            keywords={keywords}
-            isSpacePressed={isSpacePressed}
-            isDragging={dragInfo?.type === 'move'}
-            onMouseDown={nodeActions.onMouseDown} onContextMenu={nodeActions.onContextMenu} onDoubleClick={nodeActions.onDoubleClick}
-            onPinMouseDown={nodeActions.onPinMouseDown} onPinMouseUp={nodeActions.onPinMouseUp}
-            onRotateMouseDown={nodeActions.onRotateMouseDown} onRotateReset={nodeActions.onRotateReset}
-            onResizeMouseDown={nodeActions.onResizeMouseDown}
-            onContentChange={nodeActions.onContentChange} onBlur={nodeActions.onBlur}
-          />
-        ))}
+        <AnimatePresence>
+          {[...nodes].sort((a, b) => {
+            if (a.type === 'frame' && b.type !== 'frame') return -1;
+            if (a.type !== 'frame' && b.type === 'frame') return 1;
+            return 0;
+          }).map(node => (
+            <Node
+              key={node.id} node={node}
+              isSelected={selectedIds.has(node.id)} isEditing={editingId === node.id}
+              keywords={keywords}
+              isSpacePressed={isSpacePressed}
+              isDragging={dragInfo?.type === 'move'}
+              onMouseDown={nodeActions.onMouseDown} onContextMenu={nodeActions.onContextMenu} onDoubleClick={nodeActions.onDoubleClick}
+              onPinMouseDown={nodeActions.onPinMouseDown} onPinMouseUp={nodeActions.onPinMouseUp}
+              onRotateMouseDown={nodeActions.onRotateMouseDown} onRotateReset={nodeActions.onRotateReset}
+              onResizeMouseDown={nodeActions.onResizeMouseDown}
+              onContentChange={nodeActions.onContentChange} onBlur={nodeActions.onBlur}
+            />
+          ))}
+        </AnimatePresence>
       </div>
       <AnimatePresence>
         {menu && <ContextMenu menu={menu} onAction={menuAction} selectedIds={selectedIds} />}

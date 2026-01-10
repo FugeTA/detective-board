@@ -1,6 +1,7 @@
 // src/components/Node.js
-import React from 'react';
+import React, { useRef } from 'react';
 import { getYouTubeId, getVimeoId, getSpotifyId } from '../utils/media';
+import TextareaAutosize from 'react-textarea-autosize';
 import { RotateCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -39,6 +40,7 @@ const Node = ({
   onContentChange, 
   onBlur 
 }) => {
+  const nodeRef = useRef(null);
   // ドメイン取得（エラーハンドリング付き）
   const getHostname = (url) => {
     try {
@@ -52,11 +54,17 @@ const Node = ({
 
   return (
     <motion.div 
+      ref={nodeRef}
       className={`node ${node.type} ${isSelected ? 'selected' : ''}`} 
       initial={{ scale: 0, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
+      exit={{ scale: 0, opacity: 0 }}
       style={{ 
-        left: node.x, top: node.y, width: node.width, height: node.height,
+        left: node.x, top: node.y, width: node.width, 
+        height: isEditing ? 'auto' : node.height,
+        minHeight: node.type === 'frame' ? 100 : (node.type === 'note' ? 50 : (isEditing ? 50 : node.height)),
+        display: 'flex',
+        flexDirection: 'column',
         rotate: node.rotation || 0,
         background: node.color,
         color: node.textColor || '#000000',
@@ -103,7 +111,9 @@ const Node = ({
           className={`photo-inner ${node.imageSrc ? 'has-image' : ''}`} 
           style={{ 
             width: '100%',
-            height: '90%',
+            flex: isEditing ? 'none' : '1 1 auto',
+            height: isEditing ? (node.aspectRatio ? (node.width / node.aspectRatio) : (node.height * 0.9)) : 'auto',
+            minHeight: 0,
             backgroundSize: 'contain',
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
@@ -183,18 +193,28 @@ const Node = ({
       )}
 
       {isEditing ? (
-        <textarea 
+        <TextareaAutosize
           className="note-input" 
           value={node.content} 
           onChange={(e) => onContentChange(node.id, e.target.value)} 
           autoFocus 
-          onBlur={onBlur} 
+          onBlur={() => {
+            // 編集終了時に現在の高さを保存する
+            if (nodeRef.current) {
+              onBlur(node.id, nodeRef.current.offsetHeight);
+            } else {
+              onBlur(node.id);
+            }
+          }}
           onMouseDown={e => e.stopPropagation()} 
           style={{ 
-            flex: (node.type === 'note' || node.type === 'link' || isMediaNode) ? 1 : 'none', 
-            height: (node.type === 'note' || node.type === 'link' || isMediaNode) ? '100%' : 'auto', 
-            minHeight:'30px',
+            width: '100%',
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            overflow: 'hidden',
             fontSize: node.fontSize || '16px',
+            color: node.textColor || '#000000',
             resize: 'none' 
           }} 
         />
