@@ -82,7 +82,7 @@ const Node = ({
         }}
       ></div>
       
-      {node.type !== 'pin' && (
+      {node.type !== 'pin' && node.type !== 'frame' && (
         <div 
           className="rotate-handle" 
           onMouseDown={(e) => onRotateMouseDown(e, node)} 

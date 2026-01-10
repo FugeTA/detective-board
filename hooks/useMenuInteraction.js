@@ -1,5 +1,6 @@
 import { isPointNearDrawing } from '../utils/geometry';
 import { generateId } from '../utils/id';
+import { getRandomRotation } from '../utils/math';
 
 export const useMenuInteraction = ({
   menu, setMenu,
@@ -78,7 +79,7 @@ export const useMenuInteraction = ({
       } else if (payload === 'pin') {
         newNode = { id: newId, x: menu.worldX - 15, y: menu.worldY - 15, width: 30, height: 30, type: 'pin', content: '', imageSrc: null, rotation: 0, parentId: null, color: '#d63031' };
       } else {
-        newNode = { id: newId, x: menu.worldX, y: menu.worldY, width: 180, height: payload === 'photo' ? 220 : 150, type: payload, content: '', imageSrc: null, rotation: (Math.random() * 30) - 15, parentId: null };
+        newNode = { id: newId, x: menu.worldX, y: menu.worldY, width: 180, height: payload === 'photo' ? 220 : 150, type: payload, content: '', imageSrc: null, rotation: getRandomRotation(), parentId: null };
       }
       setNodes([...nodes, newNode]);
       if (menu.type === 'connection') { 

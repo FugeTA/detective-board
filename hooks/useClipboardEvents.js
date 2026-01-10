@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { getYouTubeId, getVimeoId, getSpotifyId } from '../utils/media';
 import { generateId } from '../utils/id';
+import { getRandomRotation } from '../utils/math';
 
 export const useClipboardEvents = ({
   view,
@@ -44,7 +45,7 @@ export const useClipboardEvents = ({
               type: 'photo',
               content: '',
               imageSrc: base64,
-              rotation: (Math.random() * 10) - 5,
+              rotation: getRandomRotation(),
               aspectRatio: ratio,
               parentId: null,
             };
@@ -84,7 +85,7 @@ export const useClipboardEvents = ({
           type: type,
           content: text,
           imageSrc: null,
-          rotation: (Math.random() * 6) - 3,
+          rotation: getRandomRotation(),
           parentId: null,
         };
         setNodes(prev => [...prev, newNode]);
@@ -132,7 +133,7 @@ export const useClipboardEvents = ({
               type: 'photo',
               content: '',
               imageSrc: base64,
-              rotation: (Math.random() * 10) - 5,
+              rotation: getRandomRotation(),
               aspectRatio: ratio,
               parentId: null,
             };
@@ -166,7 +167,7 @@ export const useClipboardEvents = ({
                 type: 'photo',
                 content: '',
                 imageSrc: imageUrl,
-                rotation: (Math.random() * 10) - 5,
+                rotation: getRandomRotation(),
                 aspectRatio: ratio,
                 parentId: null,
              };
@@ -201,7 +202,7 @@ export const useClipboardEvents = ({
           type: type,
           content: text,
           imageSrc: null,
-          rotation: (Math.random() * 6) - 3,
+          rotation: getRandomRotation(),
           parentId: null,
         };
         setNodes(prev => [...prev, newNode]);

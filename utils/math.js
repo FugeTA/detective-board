@@ -24,3 +24,5 @@ export const getPinLocationById = (nodes, id) => {
   const n = nodes.find(x => x.id === id);
   return n ? getPinLocation(n) : { x: 0, y: 0 };
 };
+
+export const getRandomRotation = () => (Math.random() * 20) - 10;
