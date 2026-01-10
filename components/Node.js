@@ -55,6 +55,8 @@ const Node = ({
         left: node.x, top: node.y, width: node.width, height: node.height,
         transform: `rotate(${node.rotation || 0}deg)`,
         backgroundColor: node.color,
+        color: node.textColor || '#000000',
+        fontSize: node.fontSize || '16px',
         opacity: node.type === 'frame' ? 0.5 : 1,
         border: isSelected ? '2px solid #2196f3' : (node.type === 'frame' ? '2px dashed #ccc' : '1px solid #ccc'),
         boxShadow: isSelected ? '0 0 8px rgba(33, 150, 243, 0.5)' : 'none',
@@ -175,7 +177,8 @@ const Node = ({
           style={{ 
             flex: (node.type === 'note' || node.type === 'link' || isMediaNode) ? 1 : 'none', 
             height: (node.type === 'note' || node.type === 'link' || isMediaNode) ? '100%' : 'auto', 
-            minHeight:'30px', 
+            minHeight:'30px',
+            fontSize: node.fontSize || '16px',
             resize: 'none' 
           }} 
         />

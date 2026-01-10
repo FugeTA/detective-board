@@ -130,7 +130,7 @@ export const useDetectiveBoard = () => {
       if (!selectedIds.has(hitDrawing.id)) {
         setSelectedIds(new Set([hitDrawing.id]));
       }
-      setMenu({ type: 'node', targetId: hitDrawing.id, nodeType: 'drawing', left: e.clientX, top: e.clientY });
+      setMenu({ type: 'node', targetId: hitDrawing.id, nodeType: 'drawing', left: e.clientX, top: e.clientY, currentColor: hitDrawing.color });
       return;
     }
 
@@ -160,7 +160,16 @@ export const useDetectiveBoard = () => {
       if (!selectedIds.has(node.id)) {
         setSelectedIds(new Set([node.id]));
       }
-      setMenu({ type: 'node', targetId: node.id, nodeType: node.type, left: e.clientX, top: e.clientY });
+      setMenu({ 
+        type: 'node', 
+        targetId: node.id, 
+        nodeType: node.type, 
+        left: e.clientX, 
+        top: e.clientY, 
+        currentFontSize: node.fontSize || '16px',
+        currentColor: node.color,
+        currentTextColor: node.textColor
+      });
     },
     onDoubleClick: (e, id) => { 
       e.stopPropagation(); 
@@ -240,7 +249,7 @@ export const useDetectiveBoard = () => {
       const newId = Date.now();
       let newNode;
       if (payload === 'frame') {
-        newNode = { id: newId, x: menu.worldX, y: menu.worldY, width: 400, height: 300, type: 'frame', content: 'Group', imageSrc: null, rotation: 0, parentId: null };
+        newNode = { id: newId, x: menu.worldX, y: menu.worldY, width: 400, height: 300, type: 'frame', content: 'Group', imageSrc: null, rotation: 0, parentId: null, textColor: '#ffffff' };
       } else {
         newNode = { id: newId, x: menu.worldX, y: menu.worldY, width: 180, height: payload === 'photo' ? 220 : 150, type: payload, content: '', imageSrc: null, rotation: (Math.random() * 30) - 15, parentId: null };
       }
@@ -307,6 +316,21 @@ export const useDetectiveBoard = () => {
       const targets = selectedIds.has(menu.targetId) ? selectedIds : new Set([menu.targetId]);
       setNodes(prev => prev.map(n => targets.has(n.id) ? { ...n, color: payload } : n));
       setDrawings(prev => prev.map(d => targets.has(d.id) ? { ...d, color: payload } : d));
+      setMenu(prev => ({ ...prev, currentColor: payload }));
+      return;
+    }
+    else if (action === 'changeTextColor') {
+      pushHistory();
+      const targets = selectedIds.has(menu.targetId) ? selectedIds : new Set([menu.targetId]);
+      setNodes(prev => prev.map(n => targets.has(n.id) ? { ...n, textColor: payload } : n));
+      setMenu(prev => ({ ...prev, currentTextColor: payload }));
+      return;
+    }
+    else if (action === 'changeFontSize') {
+      pushHistory();
+      const targets = selectedIds.has(menu.targetId) ? selectedIds : new Set([menu.targetId]);
+      setNodes(prev => prev.map(n => targets.has(n.id) ? { ...n, fontSize: payload } : n));
+      setMenu(prev => ({ ...prev, currentFontSize: payload || '16px' }));
       return;
     }
     else if (action === 'changePenColor') {
