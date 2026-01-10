@@ -1,5 +1,6 @@
 // src/components/CaseManager.js
 import React, { useState } from 'react';
+import { Folder, Plus, X } from 'lucide-react';
 
 const CaseManager = ({ 
   isOpen, 
@@ -27,14 +28,14 @@ const CaseManager = ({
   return (
     <>
       <button className="case-toggle" onClick={onToggleOpen}>
-        {isOpen ? '🗂 Close' : '🗂 Cases'}
+        <Folder size={16} style={{marginRight: '4px'}} /> {isOpen ? 'Close' : 'Cases'}
       </button>
 
       <div className={`case-sidebar ${isOpen ? 'open' : ''}`} onMouseDown={e => e.stopPropagation()}>
         <h3>Case Files</h3>
         
         <button className="create-case-btn" onClick={onCreateCase}>
-          ＋ New Case
+          <Plus size={14} style={{marginRight: '4px'}} /> New Case
         </button>
 
         <div className="case-list">
@@ -44,7 +45,7 @@ const CaseManager = ({
               className={`case-item ${c.id === currentCaseId ? 'active' : ''}`}
               onClick={() => onOpenCase(c.id)}
             >
-              <div className="case-icon">📁</div>
+              <div className="case-icon"><Folder size={18} /></div>
               
               <div className="case-info">
                 {editingId === c.id ? (
@@ -72,7 +73,7 @@ const CaseManager = ({
                   onClick={(e) => { e.stopPropagation(); onDeleteCase(c.id); }}
                   title="Delete Case"
                 >
-                  ×
+                  <X size={14} />
                 </button>
               )}
             </div>

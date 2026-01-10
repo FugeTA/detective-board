@@ -7,6 +7,7 @@ import Notebook from './components/Notebook';
 import ContextMenu from './components/ContextMenu';
 import CaseManager from './components/CaseManager';
 import DrawingLayer from './components/DrawingLayer'; // ★描画レイヤーを追加
+import { Pencil, Trash2, Save, Check, X } from 'lucide-react';
 
 function App() {
   const {
@@ -48,9 +49,9 @@ function App() {
         opacity: saveStatus === 'saved-fading' ? 0 : 1,
         transition: 'opacity 1s ease-out'
       }}>
-        {saveStatus === 'saving' && '💾 Saving...'}
-        {(saveStatus === 'saved' || saveStatus === 'saved-fading') && '✅ Saved'}
-        {saveStatus === 'error' && '❌ Error!'}
+        {saveStatus === 'saving' && <span style={{display:'flex', alignItems:'center', gap:'4px'}}><Save size={14}/> Saving...</span>}
+        {(saveStatus === 'saved' || saveStatus === 'saved-fading') && <span style={{display:'flex', alignItems:'center', gap:'4px'}}><Check size={14}/> Saved</span>}
+        {saveStatus === 'error' && <span style={{display:'flex', alignItems:'center', gap:'4px'}}><X size={14}/> Error!</span>}
       </div>
 
       {/* ツールバー */}
@@ -60,7 +61,7 @@ function App() {
           onClick={drawingActions.toggleDrawingMode}
           title="Toggle Drawing Mode (Esc)"
         >
-          ✏️
+          <Pencil size={20} />
         </button>
         {isDrawingMode && (
           <button
@@ -68,7 +69,7 @@ function App() {
             onClick={drawingActions.clearDrawings}
             title="Clear All Drawings"
           >
-            🗑️
+            <Trash2 size={20} />
           </button>
         )}
       </div>

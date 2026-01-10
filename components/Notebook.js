@@ -1,5 +1,6 @@
 // src/components/Notebook.js
 import React, { useState } from 'react';
+import { Book, Plus, X } from 'lucide-react';
 
 const Notebook = ({ 
   isOpen, 
@@ -22,7 +23,7 @@ const Notebook = ({
     <>
       {/* 開閉ボタン */}
       <button className="notebook-toggle" onClick={onToggleOpen}>
-        {isOpen ? '📖 Close' : '📖 Notebook'}
+        <Book size={16} style={{marginRight: '4px'}} /> {isOpen ? 'Close' : 'Notebook'}
       </button>
 
       {/* サイドバー本体 */}
@@ -41,7 +42,7 @@ const Notebook = ({
             onChange={(e) => setInputKeyword(e.target.value)} 
             onKeyDown={(e) => e.key === 'Enter' && handleAdd()} 
           />
-          <button className="keyword-add-btn" onClick={handleAdd}>＋</button>
+          <button className="keyword-add-btn" onClick={handleAdd}><Plus size={16} /></button>
         </div>
 
         {/* リスト表示 */}
@@ -62,7 +63,7 @@ const Notebook = ({
                   onDeleteKeyword(k.id); 
                 }}
               >
-                ×
+                <X size={12} />
               </button>
             </div>
           ))}

@@ -1,5 +1,6 @@
 // src/components/ContextMenu.js
 import React from 'react';
+import { FolderPlus, StickyNote, Image, MapPin, Layout, Edit2, Trash2, PenTool, Eraser } from 'lucide-react';
 
 const ContextMenu = ({ menu, onAction, selectedIds }) => {
   if (!menu) return null;
@@ -19,7 +20,7 @@ const ContextMenu = ({ menu, onAction, selectedIds }) => {
       {/* 複数選択時の特別メニュー */}
       {selectedIds && selectedIds.size > 1 && (
         <>
-          <button onClick={() => onAction('groupInFrame')}>🗂️ Group in Frame</button>
+          <button onClick={() => onAction('groupInFrame')} style={{display:'flex', alignItems:'center', gap:'6px'}}><FolderPlus size={14}/> Group in Frame</button>
           <div className="menu-divider"></div>
         </>
       )}
@@ -28,19 +29,19 @@ const ContextMenu = ({ menu, onAction, selectedIds }) => {
       {(menu.type === 'board' || menu.type === 'connection') && (
         <>
           <div style={{padding:'4px 12px', color:'#888', fontSize:'0.75rem'}}>New Evidence</div>
-          <button onClick={() => onAction('addNode', 'note')}>📝 Note</button>
-          <button onClick={() => onAction('addNode', 'photo')}>📷 Photo</button>
-          <button onClick={() => onAction('addNode', 'pin')}>📍 Pin</button>
-          <button onClick={() => onAction('addNode', 'frame')}>🖼️ Frame</button>
+          <button onClick={() => onAction('addNode', 'note')} style={{display:'flex', alignItems:'center', gap:'6px'}}><StickyNote size={14}/> Note</button>
+          <button onClick={() => onAction('addNode', 'photo')} style={{display:'flex', alignItems:'center', gap:'6px'}}><Image size={14}/> Photo</button>
+          <button onClick={() => onAction('addNode', 'pin')} style={{display:'flex', alignItems:'center', gap:'6px'}}><MapPin size={14}/> Pin</button>
+          <button onClick={() => onAction('addNode', 'frame')} style={{display:'flex', alignItems:'center', gap:'6px'}}><Layout size={14}/> Frame</button>
         </>
       )}
 
       {/* ノードを右クリックした時 */}
       {menu.type === 'node' && (
         <>
-          {menu.nodeType !== 'drawing' && menu.nodeType !== 'pin' && <button onClick={() => onAction('edit')}>✏️ Edit Text</button>}
+          {menu.nodeType !== 'drawing' && menu.nodeType !== 'pin' && <button onClick={() => onAction('edit')} style={{display:'flex', alignItems:'center', gap:'6px'}}><Edit2 size={14}/> Edit Text</button>}
           {menu.nodeType === 'photo' && (
-             <button onClick={() => onAction('changePhoto')}>🖼 Change Image</button>
+             <button onClick={() => onAction('changePhoto')} style={{display:'flex', alignItems:'center', gap:'6px'}}><Image size={14}/> Change Image</button>
           )}
           <div className="menu-divider"></div>
           {menu.nodeType !== 'drawing' && menu.nodeType !== 'pin' && <div style={{padding:'4px 12px', color:'#888', fontSize:'0.75rem'}}>Background</div>}
@@ -127,7 +128,7 @@ const ContextMenu = ({ menu, onAction, selectedIds }) => {
             </>
           )}
           <div className="menu-divider"></div>
-          <button onClick={() => onAction('delete')} style={{color:'#ff6b6b'}}>🗑 Delete</button>
+          <button onClick={() => onAction('delete')} style={{color:'#ff6b6b', display:'flex', alignItems:'center', gap:'6px'}}><Trash2 size={14}/> Delete</button>
         </>
       )}
 
@@ -166,9 +167,9 @@ const ContextMenu = ({ menu, onAction, selectedIds }) => {
             >✕</div>
           </div>
           <div className="menu-divider"></div>
-          <button onClick={() => onAction('addNode', 'pin')}>📍 Add Pin</button>
+          <button onClick={() => onAction('addNode', 'pin')} style={{display:'flex', alignItems:'center', gap:'6px'}}><MapPin size={14}/> Add Pin</button>
           <div className="menu-divider"></div>
-          <button onClick={() => onAction('delete')} style={{color:'#ff6b6b'}}>🗑 Delete Connection</button>
+          <button onClick={() => onAction('delete')} style={{color:'#ff6b6b', display:'flex', alignItems:'center', gap:'6px'}}><Trash2 size={14}/> Delete Connection</button>
         </>
       )}
 
@@ -179,12 +180,12 @@ const ContextMenu = ({ menu, onAction, selectedIds }) => {
           <div style={{padding:'4px 12px', color:'#888', fontSize:'0.75rem'}}>Tools</div>
           <button 
             onClick={() => onAction('setDrawingTool', 'pen')}
-            style={{ fontWeight: menu.currentTool === 'pen' ? 'bold' : 'normal' }}
-          >✏️ Pen</button>
+            style={{ fontWeight: menu.currentTool === 'pen' ? 'bold' : 'normal', display:'flex', alignItems:'center', gap:'6px' }}
+          ><PenTool size={14}/> Pen</button>
           <button 
             onClick={() => onAction('setDrawingTool', 'eraser')}
-            style={{ fontWeight: menu.currentTool === 'eraser' ? 'bold' : 'normal' }}
-          >🧹 Eraser</button>
+            style={{ fontWeight: menu.currentTool === 'eraser' ? 'bold' : 'normal', display:'flex', alignItems:'center', gap:'6px' }}
+          ><Eraser size={14}/> Eraser</button>
           <div className="menu-divider"></div>
           <div style={{padding:'4px 12px', color:'#888', fontSize:'0.75rem'}}>Pen Color</div>
           <div style={{ padding: '8px 12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>

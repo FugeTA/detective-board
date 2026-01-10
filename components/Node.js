@@ -1,6 +1,7 @@
 // src/components/Node.js
 import React from 'react';
 import { getYouTubeId, getVimeoId, getSpotifyId } from '../utils/media';
+import { RotateCw } from 'lucide-react';
 
 // ハイライト処理用コンポーネント
 const HighlightedContent = ({ text, keywords }) => {
@@ -89,7 +90,7 @@ const Node = ({
           onDoubleClick={(e) => onRotateReset(e, node.id)} 
           title="Drag to rotate, Double-click to reset"
           style={{ fontSize: '16px' }}
-        >↻</div>
+        ><RotateCw size={12} /></div>
       )}
       
       {node.type !== 'pin' && <div className="resize-handle" onMouseDown={(e) => onResizeMouseDown(e, node)} ></div>}
