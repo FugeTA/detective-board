@@ -171,7 +171,13 @@ export const useBoardInteraction = ({
                     return { ...node, x: originalNodeState.x + dx, y: originalNodeState.y + dy };
                 }
             } else if (dragInfo.type === 'resize' && node.id === dragInfo.id) {
-                return { ...node, width: Math.max(100, originalNodeState.width + dx), height: Math.max(100, originalNodeState.height + dy) };
+                let newWidth = Math.max(100, originalNodeState.width + dx);
+                let newHeight = Math.max(100, originalNodeState.height + dy);
+                if (e.shiftKey) {
+                    const ratio = originalNodeState.width / originalNodeState.height;
+                    newHeight = newWidth / ratio;
+                }
+                return { ...node, width: newWidth, height: newHeight };
             }
             return node;
         }));

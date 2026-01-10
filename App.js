@@ -15,13 +15,15 @@ function App() {
     drawings, currentDrawing, isDrawingMode, // ★描画state
     isSpacePressed, isPanning,
     dragInfo,
-    handleWheel, handleBoardMouseDown, handleBoardContextMenu, handleMouseMove, handleMouseUp,
+    fullscreenImage, setFullscreenImage,
+    handleWheel, handleBoardMouseDown, handleBoardContextMenu, handleMouseMove, handleMouseUp, handleDragOver, handleDrop,
     notebookActions, nodeActions, menuAction, handleImageUpload, caseActions, drawingActions, // ★描画アクション
   } = useDetectiveBoard();
 
   return (
     <div className={`board ${isDrawingMode ? 'drawing-mode' : ''}`}
       onMouseDown={handleBoardMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onWheel={handleWheel} onContextMenu={handleBoardContextMenu}
+      onDragOver={handleDragOver} onDrop={handleDrop}
       style={{ 
         backgroundImage: 'radial-gradient(#444 1px, transparent 1px)', 
         backgroundSize: `${20 * view.scale}px ${20 * view.scale}px`, 
@@ -119,6 +121,19 @@ function App() {
         ))}
       </div>
       <ContextMenu menu={menu} onAction={menuAction} selectedIds={selectedIds} />
+      
+      {fullscreenImage && (
+        <div 
+          style={{
+            position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', 
+            backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 9999, 
+            display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'zoom-out'
+          }}
+          onClick={() => setFullscreenImage(null)}
+        >
+          <img src={fullscreenImage} style={{maxWidth: '95%', maxHeight: '95%', objectFit: 'contain', boxShadow: '0 0 20px rgba(0,0,0,0.5)'}} alt="Fullscreen" />
+        </div>
+      )}
     </div>
   );
 }

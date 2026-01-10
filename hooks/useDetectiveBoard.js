@@ -5,6 +5,7 @@ import { useBoardState } from './useBoardState';
 import { useCaseManagement } from './useCaseManagement';
 import { useDrawingTools } from './useDrawingTools';
 import { useBoardInteraction } from './useBoardInteraction';
+import { useClipboardEvents } from './useClipboardEvents';
 
 export const useDetectiveBoard = () => {
   // --- State ---
@@ -22,6 +23,7 @@ export const useDetectiveBoard = () => {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [connectionDraft, setConnectionDraft] = useState(null);
   const [menu, setMenu] = useState(null); 
+  const [fullscreenImage, setFullscreenImage] = useState(null);
   
   const fileInputRef = useRef(null);
 
@@ -49,6 +51,15 @@ export const useDetectiveBoard = () => {
     eraseAt
   });
 
+  // クリップボード＆ドラッグドロップ操作のフック
+  const { handleDragOver, handleDrop } = useClipboardEvents({
+    view,
+    setNodes,
+    pushHistory,
+    setSelectedIds,
+    editingId
+  });
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (editingId !== null) return;
@@ -70,56 +81,6 @@ export const useDetectiveBoard = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedIds, editingId, undo, pushHistory]);
-
-    useEffect(() => {
-    const handlePaste = (event) => {
-      if (editingId !== null) return;
-      const items = event.clipboardData.items;
-      const imageItem = Array.from(items).find(item => item.type.startsWith('image/'));
-      if (!imageItem) return;
-
-      event.preventDefault();
-      const file = imageItem.getAsFile();
-      if (!file) return;
-
-      pushHistory();
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64 = e.target.result;
-        const img = new Image();
-        img.src = base64;
-        img.onload = () => {
-          const ratio = img.naturalWidth / img.naturalHeight;
-          const newWidth = 220;
-          const newHeight = (newWidth / ratio) + 50;
-          
-          const centerX = (window.innerWidth / 2 - view.x) / view.scale;
-          const centerY = (window.innerHeight / 2 - view.y) / view.scale;
-
-          const newId = Date.now();
-          const newNode = {
-            id: newId,
-            x: centerX - newWidth / 2,
-            y: centerY - newHeight / 2,
-            width: newWidth,
-            height: newHeight,
-            type: 'photo',
-            content: '',
-            imageSrc: base64,
-            rotation: (Math.random() * 10) - 5,
-            aspectRatio: ratio,
-            parentId: null,
-          };
-          setNodes(prev => [...prev, newNode]);
-          setSelectedIds(new Set([newId]));
-        };
-      };
-      reader.readAsDataURL(file);
-    };
-
-    window.addEventListener('paste', handlePaste);
-    return () => window.removeEventListener('paste', handlePaste);
-  }, [view.x, view.y, view.scale, editingId, pushHistory]);
 
   // --- Case Actions ---
   const openCase = async (id) => {
@@ -201,7 +162,15 @@ export const useDetectiveBoard = () => {
       }
       setMenu({ type: 'node', targetId: node.id, nodeType: node.type, left: e.clientX, top: e.clientY });
     },
-    onDoubleClick: (e, id) => { e.stopPropagation(); snapshotRef.current = { nodes, edges, drawings }; setEditingId(id); },
+    onDoubleClick: (e, id) => { 
+      e.stopPropagation(); 
+      const node = nodes.find(n => n.id === id);
+      if (node && node.type === 'photo' && node.imageSrc) {
+        setFullscreenImage(node.imageSrc);
+        return;
+      }
+      snapshotRef.current = { nodes, edges, drawings }; setEditingId(id); 
+    },
     onPinMouseDown: (e, id) => {
       if (isSpacePressed || e.button === 1) return;
       if (isDrawingMode) return;
@@ -360,7 +329,8 @@ export const useDetectiveBoard = () => {
     drawings: drawings.map(d => ({ ...d, selected: selectedIds.has(d.id) })), currentDrawing, isDrawingMode, penColor, drawingTool, // ★描画用state
     isSpacePressed, isPanning,
     dragInfo,
-    handleWheel, handleBoardMouseDown, handleBoardContextMenu, handleMouseMove, handleMouseUp,
+    fullscreenImage, setFullscreenImage,
+    handleWheel, handleBoardMouseDown, handleBoardContextMenu, handleMouseMove, handleMouseUp, handleDragOver, handleDrop,
     notebookActions, nodeActions, menuAction, caseActions, handleImageUpload, drawingActions, // ★描画アクション
   };
 };

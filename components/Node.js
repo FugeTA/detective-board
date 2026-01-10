@@ -1,5 +1,6 @@
 // src/components/Node.js
 import React from 'react';
+import { getYouTubeId, getVimeoId, getSpotifyId } from '../utils/media';
 
 // ハイライト処理用コンポーネント
 const HighlightedContent = ({ text, keywords }) => {
@@ -36,6 +37,17 @@ const Node = ({
   onContentChange, 
   onBlur 
 }) => {
+  // ドメイン取得（エラーハンドリング付き）
+  const getHostname = (url) => {
+    try {
+      return new URL(url).hostname;
+    } catch (e) {
+      return '';
+    }
+  };
+
+  const isMediaNode = ['youtube', 'vimeo', 'spotify'].includes(node.type);
+
   return (
     <div 
       className={`node ${node.type} ${isSelected ? 'selected' : ''}`} 
@@ -72,7 +84,11 @@ const Node = ({
         <div 
           className={`photo-inner ${node.imageSrc ? 'has-image' : ''}`} 
           style={{ 
-            aspectRatio: node.aspectRatio ? `${node.aspectRatio} / 1` : 'auto', 
+            width: '100%',
+            height: '90%',
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center',
             backgroundImage: node.imageSrc ? `url(${node.imageSrc})` : undefined 
           }}
         >
@@ -80,6 +96,74 @@ const Node = ({
         </div>
       )}
       
+      {node.type === 'youtube' && (
+        <div style={{width:'100%', height:'100%', display:'flex', flexDirection:'column', overflow:'hidden'}}>
+          {/* ドラッグ用ハンドル */}
+          <div style={{
+            height:'24px', background:'#f0f0f0', cursor: isSpacePressed ? 'grab' : 'move', 
+            fontSize:'11px', display:'flex', alignItems:'center', padding:'0 8px', color:'#666', flexShrink: 0
+          }}>
+             YouTube
+          </div>
+          <iframe 
+            width="100%" 
+            height="100%" 
+            src={`https://www.youtube.com/embed/${getYouTubeId(node.content)}`} 
+            frameBorder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+            allowFullScreen
+            onMouseDown={(e) => e.stopPropagation()} // iframe内操作時はドラッグしない
+            style={{flex:1, background:'#000'}}
+          ></iframe>
+        </div>
+      )}
+
+      {node.type === 'vimeo' && (
+        <div style={{width:'100%', height:'100%', display:'flex', flexDirection:'column', overflow:'hidden'}}>
+          <div style={{
+            height:'24px', background:'#f0f0f0', cursor: isSpacePressed ? 'grab' : 'move', 
+            fontSize:'11px', display:'flex', alignItems:'center', padding:'0 8px', color:'#666', flexShrink: 0
+          }}>
+             Vimeo
+          </div>
+          <iframe 
+            width="100%" 
+            height="100%" 
+            src={`https://player.vimeo.com/video/${getVimeoId(node.content)}`} 
+            frameBorder="0" 
+            allow="autoplay; fullscreen; picture-in-picture" 
+            allowFullScreen
+            onMouseDown={(e) => e.stopPropagation()}
+            style={{flex:1, background:'#000'}}
+          ></iframe>
+        </div>
+      )}
+
+      {node.type === 'spotify' && (
+        <div style={{width:'100%', height:'100%', display:'flex', flexDirection:'column', overflow:'hidden'}}>
+          <div style={{
+            height:'24px', background:'#f0f0f0', cursor: isSpacePressed ? 'grab' : 'move', 
+            fontSize:'11px', display:'flex', alignItems:'center', padding:'0 8px', color:'#666', flexShrink: 0
+          }}>
+             Spotify
+          </div>
+          {(() => {
+             const info = getSpotifyId(node.content);
+             return info ? (
+               <iframe 
+                 src={`https://open.spotify.com/embed/${info.type}/${info.id}`} 
+                 width="100%" 
+                 height="100%" 
+                 frameBorder="0" 
+                 allow="encrypted-media"
+                 onMouseDown={(e) => e.stopPropagation()}
+                 style={{flex:1, background:'#282828'}}
+               ></iframe>
+             ) : null;
+          })()}
+        </div>
+      )}
+
       {isEditing ? (
         <textarea 
           className="note-input" 
@@ -89,15 +173,15 @@ const Node = ({
           onBlur={onBlur} 
           onMouseDown={e => e.stopPropagation()} 
           style={{ 
-            flex: node.type === 'note' ? 1 : 'none', 
-            height: node.type === 'note' ? '100%' : 'auto', 
+            flex: (node.type === 'note' || node.type === 'link' || isMediaNode) ? 1 : 'none', 
+            height: (node.type === 'note' || node.type === 'link' || isMediaNode) ? '100%' : 'auto', 
             minHeight:'30px', 
             resize: 'none' 
           }} 
         />
-      ) : (
+      ) : !isMediaNode && (
         <div style={{
-          flex: node.type === 'note' ? 1 : 'none', 
+          flex: (node.type === 'note' || node.type === 'link') ? 1 : 'none', 
           whiteSpace: 'pre-wrap', 
           width:'100%', 
           height: 'auto', 
@@ -106,7 +190,29 @@ const Node = ({
           overflow:'hidden', 
           padding: '5px 0 0 0'
         }}>
-          <HighlightedContent text={node.content} keywords={keywords} />
+          {node.type === 'link' ? (
+            <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
+              <div style={{display:'flex', alignItems:'center', gap:'6px', opacity:0.8, fontSize:'0.75rem', color:'#555'}}>
+                 {/* Google Favicon APIを使用 */}
+                 <img 
+                   src={`https://www.google.com/s2/favicons?domain=${getHostname(node.content)}&sz=32`} 
+                   width="16" height="16" alt="" style={{borderRadius:'2px'}}
+                 />
+                 <span style={{overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{getHostname(node.content)}</span>
+              </div>
+              <a 
+                href={node.content} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                onMouseDown={(e) => e.stopPropagation()}
+                style={{ pointerEvents: 'auto', color: '#0066cc', textDecoration: 'underline', cursor: 'pointer', wordBreak: 'break-all' }}
+              >
+                {node.content}
+              </a>
+            </div>
+          ) : (
+            <HighlightedContent text={node.content} keywords={keywords} />
+          )}
         </div>
       )}
     </div>
