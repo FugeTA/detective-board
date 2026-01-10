@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { db } from '../db';
 import { DEFAULT_STATE } from './useBoardState';
+import { generateId } from '../utils/id';
 
 export const useCaseManagement = ({ nodes, edges, keywords, drawings, view, loadData }) => {
   const [currentCaseId, setCurrentCaseId] = useState(null);
@@ -13,7 +14,7 @@ export const useCaseManagement = ({ nodes, edges, keywords, drawings, view, load
     const init = async () => {
       const allSaves = await db.saves.toArray();
       if (allSaves.length === 0) {
-        const newId = `case-${Date.now()}`;
+        const newId = generateId('case');
         const newCase = { id: newId, name: 'Case #1', updatedAt: Date.now(), ...DEFAULT_STATE };
         await db.saves.add(newCase);
         setCaseList([{ id: newId, name: 'Case #1', updatedAt: Date.now() }]);
@@ -69,7 +70,7 @@ export const useCaseManagement = ({ nodes, edges, keywords, drawings, view, load
   };
 
   const createCase = async () => {
-    const newId = `case-${Date.now()}`;
+    const newId = generateId('case');
     const newName = `Case #${caseList.length + 1}`;
     const newCase = { id: newId, name: newName, updatedAt: Date.now(), ...DEFAULT_STATE };
     await db.saves.add(newCase);

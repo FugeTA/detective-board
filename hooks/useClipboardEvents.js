@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { getYouTubeId, getVimeoId, getSpotifyId } from '../utils/media';
+import { generateId } from '../utils/id';
 
 export const useClipboardEvents = ({
   view,
@@ -33,7 +34,7 @@ export const useClipboardEvents = ({
             const centerX = (window.innerWidth / 2 - view.x) / view.scale;
             const centerY = (window.innerHeight / 2 - view.y) / view.scale;
 
-            const newId = Date.now();
+            const newId = generateId('node');
             const newNode = {
               id: newId,
               x: centerX - newWidth / 2,
@@ -66,7 +67,7 @@ export const useClipboardEvents = ({
 
         const centerX = (window.innerWidth / 2 - view.x) / view.scale;
         const centerY = (window.innerHeight / 2 - view.y) / view.scale;
-        const newId = Date.now();
+        const newId = generateId('node');
         
         let type = isUrl ? 'link' : 'note';
         let w = 180, h = 150;
@@ -121,7 +122,7 @@ export const useClipboardEvents = ({
             const newWidth = 220;
             const newHeight = (newWidth / ratio) + 50;
             
-            const newId = Date.now();
+            const newId = generateId('node');
             const newNode = {
               id: newId,
               x: worldX - newWidth / 2,
@@ -155,7 +156,7 @@ export const useClipboardEvents = ({
              const newWidth = 220;
              const newHeight = (newWidth / ratio) + 50;
              
-             const newId = Date.now();
+             const newId = generateId('node');
              const newNode = {
                 id: newId,
                 x: worldX - newWidth / 2,
@@ -190,7 +191,7 @@ export const useClipboardEvents = ({
         else if (vimeoId) { type = 'vimeo'; w = 320; h = 220; }
         else if (spotifyInfo) { type = 'spotify'; w = 300; h = spotifyInfo.type === 'track' ? 100 : 380; }
 
-        const newId = Date.now();
+        const newId = generateId('node');
         const newNode = {
           id: newId,
           x: worldX - w / 2,

@@ -1,5 +1,6 @@
 // src/hooks/useDrawing.js
 import { useState, useCallback } from 'react';
+import { generateId } from '../utils/id';
 
 export const useDrawing = (view, scale, penColor = '#ff3b30') => {
   const [isDrawing, setIsDrawing] = useState(false);
@@ -16,7 +17,7 @@ export const useDrawing = (view, scale, penColor = '#ff3b30') => {
     const y = (e.clientY - view.y) / scale;
     
     setCurrentPath({
-      id: `path-${Date.now()}`,
+      id: generateId('path'),
       points: [`M ${x},${y}`], // Move to
       color: penColor,
       strokeWidth: 3 / scale, // ズームしても線の太さが同じに見えるように調整

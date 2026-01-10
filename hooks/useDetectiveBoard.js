@@ -1,31 +1,24 @@
-import { useState, useRef, useEffect } from 'react';
-import { getPinLocation } from '../utils/math';
-import { isPointNearDrawing } from '../utils/geometry';
 import { useBoardState } from './useBoardState';
 import { useCaseManagement } from './useCaseManagement';
 import { useDrawingTools } from './useDrawingTools';
 import { useBoardInteraction } from './useBoardInteraction';
 import { useClipboardEvents } from './useClipboardEvents';
+import { useNodeInteraction } from './useNodeInteraction';
+import { useEdgeInteraction } from './useEdgeInteraction';
+import { useMenuInteraction } from './useMenuInteraction';
+import { useUIState } from './useUIState';
+import { useKeyboardShortcuts } from './useKeyboardShortcuts';
 
 export const useDetectiveBoard = () => {
-  // --- State ---
-  const [activeSidebar, setActiveSidebar] = useState(null);
-  const isNotebookOpen = activeSidebar === 'notebook';
-  const isCaseManagerOpen = activeSidebar === 'case';
-
   // モジュール化されたフックを使用
   const { nodes, setNodes, edges, setEdges, keywords, setKeywords, drawings, setDrawings, view, setView, history, pushHistory, pushSpecificHistory, undo, loadData } = useBoardState();
+  const { activeSidebar, setActiveSidebar, editingId, setEditingId, selectedIds, setSelectedIds, connectionDraft, setConnectionDraft, menu, setMenu, fullscreenImage, setFullscreenImage, fileInputRef } = useUIState();
   const { currentCaseId, caseList, saveStatus, openCase: baseOpenCase, createCase, deleteCase, renameCase } = useCaseManagement({ nodes, edges, keywords, drawings, view, loadData });
   const { isDrawingMode, setIsDrawingMode, currentDrawing, setCurrentDrawing, penColor, setPenColor, drawingTool, setDrawingTool, isErasing, setIsErasing, toggleDrawingMode, clearDrawings, eraseAt } = useDrawingTools(pushHistory, setDrawings, view);
 
-  // UI操作系
-  const [editingId, setEditingId] = useState(null);
-  const [selectedIds, setSelectedIds] = useState(new Set());
-  const [connectionDraft, setConnectionDraft] = useState(null);
-  const [menu, setMenu] = useState(null); 
-  const [fullscreenImage, setFullscreenImage] = useState(null);
-  
-  const fileInputRef = useRef(null);
+  // 派生ステート
+  const isNotebookOpen = activeSidebar === 'notebook';
+  const isCaseManagerOpen = activeSidebar === 'case';
 
   // ボード操作ロジックのフック
   const { 
@@ -60,27 +53,61 @@ export const useDetectiveBoard = () => {
     editingId
   });
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (editingId !== null) return;
-      // Escキーで描画モードをオフ
-      if (e.key === 'Escape') {
-        setIsDrawingMode(false);
-      }
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedIds.size > 0) {
-          e.preventDefault(); pushHistory();
-          setNodes(prev => prev.filter(n => !selectedIds.has(n.id)));
-          setEdges(prev => prev.filter(edge => !selectedIds.has(edge.from) && !selectedIds.has(edge.to) && !selectedIds.has(edge.id)));
-          setDrawings(prev => prev.filter(d => !selectedIds.has(d.id)));
-          setSelectedIds(new Set());
-        }
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedIds, editingId, undo, pushHistory]);
+  // ノード操作のフック
+  const { nodeActions } = useNodeInteraction({
+    nodes, setNodes,
+    edges, setEdges,
+    drawings,
+    isDrawingMode,
+    isSpacePressed,
+    selectedIds, setSelectedIds,
+    editingId, setEditingId,
+    setMenu,
+    setDragInfo,
+    connectionDraft, setConnectionDraft,
+    pushHistory,
+    pushSpecificHistory,
+    snapshotRef,
+    mouseDownData,
+    setFullscreenImage
+  });
+
+  // エッジ操作のフック
+  const { edgeActions } = useEdgeInteraction({
+    edges,
+    isDrawingMode,
+    selectedIds, setSelectedIds,
+    setMenu,
+    view
+  });
+
+  // メニュー操作のフック
+  const { handleBoardContextMenu, handleImageUpload, menuAction } = useMenuInteraction({
+    menu, setMenu,
+    nodes, setNodes,
+    edges, setEdges,
+    drawings, setDrawings,
+    selectedIds, setSelectedIds,
+    setEditingId,
+    view,
+    pushHistory,
+    fileInputRef,
+    setPenColor,
+    setDrawingTool,
+    setIsDrawingMode,
+    isDrawingMode,
+    drawingTool
+  });
+
+  // キーボードショートカットのフック
+  useKeyboardShortcuts({
+    editingId,
+    setIsDrawingMode,
+    selectedIds, setSelectedIds,
+    pushHistory,
+    setNodes, setEdges, setDrawings,
+    undo
+  });
 
   // --- Case Actions ---
   const openCase = async (id) => {
@@ -105,298 +132,6 @@ export const useDetectiveBoard = () => {
   const drawingActions = {
     toggleDrawingMode,
     clearDrawings
-  };
-
-  const handleBoardContextMenu = (e) => {
-    e.preventDefault(); setEditingId(null);
-    if (isDrawingMode) {
-      setMenu({ type: 'drawing', left: e.clientX, top: e.clientY, currentTool: drawingTool });
-      return;
-    }
-
-    // 線の右クリック判定
-    const worldX = (e.clientX - view.x) / view.scale;
-    const worldY = (e.clientY - view.y) / view.scale;
-    const hitThreshold = 10 / view.scale;
-    let hitDrawing = null;
-    for (let i = drawings.length - 1; i >= 0; i--) {
-      if (isPointNearDrawing(worldX, worldY, drawings[i], hitThreshold)) {
-        hitDrawing = drawings[i];
-        break;
-      }
-    }
-
-    if (hitDrawing) {
-      if (!selectedIds.has(hitDrawing.id)) {
-        setSelectedIds(new Set([hitDrawing.id]));
-      }
-      setMenu({ type: 'node', targetId: hitDrawing.id, nodeType: 'drawing', left: e.clientX, top: e.clientY, currentColor: hitDrawing.color });
-      return;
-    }
-
-    setSelectedIds(new Set());
-    setMenu({ type: 'board', left: e.clientX, top: e.clientY, worldX: (e.clientX - view.x) / view.scale, worldY: (e.clientY - view.y) / view.scale });
-  };
-
-  const nodeActions = {
-    onMouseDown: (e, node) => {
-      if (isSpacePressed || e.button === 1) return; // パン移動のためにバブリングさせる
-      if (isDrawingMode) return;
-      e.stopPropagation();
-      setMenu(null);
-      if (e.shiftKey) {
-        setSelectedIds(prev => { const next = new Set(prev); if (next.has(node.id)) next.delete(node.id); else next.add(node.id); return next; });
-        return;
-      }
-      if (!selectedIds.has(node.id)) setSelectedIds(new Set([node.id]));
-      if (editingId === node.id) return;
-
-      // ドラッグ準備（まだカーソルは変えない）
-      snapshotRef.current = { nodes, edges, drawings };
-      mouseDownData.current = { type: 'move', id: node.id, startX: e.clientX, startY: e.clientY, initialNode: { ...node } };
-    },
-    onContextMenu: (e, node) => {
-      e.preventDefault(); e.stopPropagation(); 
-      if (!selectedIds.has(node.id)) {
-        setSelectedIds(new Set([node.id]));
-      }
-      setMenu({ 
-        type: 'node', 
-        targetId: node.id, 
-        nodeType: node.type, 
-        left: e.clientX, 
-        top: e.clientY, 
-        currentFontSize: node.fontSize || '16px',
-        currentColor: node.color,
-        currentTextColor: node.textColor
-      });
-    },
-    onDoubleClick: (e, id) => { 
-      e.stopPropagation(); 
-      const node = nodes.find(n => n.id === id);
-      if (node) {
-        if (node.type === 'pin') return; // ピンは編集しない
-        if (node.type === 'photo' && node.imageSrc) {
-          setFullscreenImage(node.imageSrc);
-          return;
-        }
-      }
-      snapshotRef.current = { nodes, edges, drawings }; setEditingId(id); 
-    },
-    onPinMouseDown: (e, id) => {
-      if (isSpacePressed || e.button === 1) return;
-      if (isDrawingMode) return;
-      e.stopPropagation(); e.preventDefault(); setMenu(null);
-      const node = nodes.find(n => n.id === id);
-      const pinLoc = getPinLocation(node);
-      setConnectionDraft({ sourceId: id, startX: pinLoc.x, startY: pinLoc.y, currX: pinLoc.x, currY: pinLoc.y });
-    },
-    onPinMouseUp: (e, id) => {
-      if (isDrawingMode) return;
-      e.stopPropagation();
-      setMenu(null);
-      if (connectionDraft && connectionDraft.sourceId !== id) { setEdges([...edges, { id: `edge-${Date.now()}`, from: connectionDraft.sourceId, to: id }]); }
-      setConnectionDraft(null);
-    },
-    onRotateMouseDown: (e, node) => {
-      if (isSpacePressed || e.button === 1) return;
-      if (isDrawingMode) return;
-      e.stopPropagation(); e.preventDefault(); snapshotRef.current = { nodes, edges, drawings };
-      setMenu(null);
-      const centerX = node.x + node.width / 2;
-      const centerY = node.y + node.height / 2;
-      setDragInfo({ type: 'rotate', id: node.id, centerX, centerY, initialNode: { ...node } });
-    },
-    onRotateReset: (e, id) => { e.stopPropagation(); pushHistory(); setNodes(prev => prev.map(n => n.id === id ? { ...n, rotation: 0 } : n)); },
-    onResizeMouseDown: (e, node) => {
-      if (isSpacePressed || e.button === 1) return;
-      if (isDrawingMode) return;
-      e.stopPropagation(); snapshotRef.current = { nodes, edges, drawings };
-      setMenu(null);
-      setDragInfo({ type: 'resize', id: node.id, startX: e.clientX, startY: e.clientY, initialNode: { ...node } });
-    },
-    onContentChange: (id, val) => setNodes(nodes.map(n => n.id === id ? { ...n, content: val } : n)),
-    onBlur: () => {
-      if (snapshotRef.current) { 
-        const pastState = snapshotRef.current;
-        pushSpecificHistory(pastState.nodes, pastState.edges, pastState.drawings);
-        snapshotRef.current = null;
-      }
-      setEditingId(null);
-    }
-  };
-
-  const edgeActions = {
-    onMouseDown: (e, edgeId) => {
-      if (isDrawingMode) return;
-      e.stopPropagation();
-      setMenu(null);
-      if (!selectedIds.has(edgeId)) setSelectedIds(new Set([edgeId]));
-    },
-    onContextMenu: (e, edgeId) => {
-      e.preventDefault(); e.stopPropagation();
-      if (!selectedIds.has(edgeId)) {
-        setSelectedIds(new Set([edgeId]));
-      }
-      const edge = edges.find(e => e.id === edgeId);
-      setMenu({ 
-        type: 'edge', 
-        targetId: edgeId, 
-        left: e.clientX, 
-        top: e.clientY, 
-        worldX: (e.clientX - view.x) / view.scale, 
-        worldY: (e.clientY - view.y) / view.scale, 
-        currentColor: edge ? edge.color : null 
-      });
-    }
-  };
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file || !menu || menu.type !== 'node') return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target.result;
-      const img = new Image();
-      img.src = base64;
-      img.onload = () => {
-        pushHistory();
-        const ratio = img.naturalWidth / img.naturalHeight;
-        setNodes(prev => prev.map(node => node.id === menu.targetId ? { ...node, imageSrc: base64, width: 220, height: (220 / ratio) + 50, aspectRatio: ratio } : node));
-      };
-      setMenu(null);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
-
-  const menuAction = (action, payload) => {
-    if (!menu) return;
-    if (action === 'addNode') {
-      pushHistory();
-      const newId = Date.now();
-      let newNode;
-      if (payload === 'frame') {
-        newNode = { id: newId, x: menu.worldX, y: menu.worldY, width: 400, height: 300, type: 'frame', content: 'Group', imageSrc: null, rotation: 0, parentId: null, textColor: '#ffffff' };
-      } else if (payload === 'pin') {
-        newNode = { id: newId, x: menu.worldX - 15, y: menu.worldY - 15, width: 30, height: 30, type: 'pin', content: '', imageSrc: null, rotation: 0, parentId: null, };
-      } else {
-        newNode = { id: newId, x: menu.worldX, y: menu.worldY, width: 180, height: payload === 'photo' ? 220 : 150, type: payload, content: '', imageSrc: null, rotation: (Math.random() * 30) - 15, parentId: null };
-      }
-      setNodes([...nodes, newNode]);
-      if (menu.type === 'connection') { 
-        setEdges([...edges, { id: `edge-${Date.now()}`, from: menu.sourceId, to: newNode.id }]); 
-      } else if (menu.type === 'edge') {
-        const originalEdge = edges.find(e => e.id === menu.targetId);
-        if (originalEdge) {
-          const edge1 = { ...originalEdge, id: `edge-${Date.now()}-1`, to: newNode.id };
-          const edge2 = { ...originalEdge, id: `edge-${Date.now()}-2`, from: newNode.id };
-          setEdges(prev => [...prev.filter(e => e.id !== menu.targetId), edge1, edge2]);
-        }
-      }
-      if (payload !== 'pin') setEditingId(newId);
-      setSelectedIds(new Set([newId]));
-    } 
-    else if (action === 'delete') { 
-      pushHistory();
-      const targets = selectedIds.has(menu.targetId) ? selectedIds : new Set([menu.targetId]);
-      setNodes(nodes.filter(n => !targets.has(n.id))); setEdges(edges.filter(e => !targets.has(e.from) && !targets.has(e.to) && !targets.has(e.id)));
-      setDrawings(drawings.filter(d => !targets.has(d.id)));
-      setSelectedIds(new Set());
-    }
-    else if (action === 'edit') { setEditingId(menu.targetId); }
-    else if (action === 'groupInFrame') {
-      if (selectedIds.size < 1) { setMenu(null); return; }
-      pushHistory();
-
-      const newFrameId = Date.now(); // IDを先に生成
-
-      setNodes(prevNodes => {
-        const nodesToGroup = prevNodes.filter(n => selectedIds.has(n.id));
-        if (nodesToGroup.length < 1) {
-            return prevNodes;
-        }
-
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        nodesToGroup.forEach(node => {
-            minX = Math.min(minX, node.x);
-            minY = Math.min(minY, node.y);
-            maxX = Math.max(maxX, node.x + node.width);
-            maxY = Math.max(maxY, node.y + node.height);
-        });
-
-        const padding = 40;
-        const frameX = minX - padding;
-        const frameY = minY - padding;
-        const frameWidth = (maxX - minX) + (padding * 2);
-        const frameHeight = (maxY - minY) + (padding * 2);
-
-        const newFrame = {
-            id: newFrameId, x: frameX, y: frameY,
-            width: frameWidth, height: frameHeight,
-            type: 'frame', content: 'New Group',
-            imageSrc: null, rotation: 0, parentId: null
-        };
-
-        const updatedNodes = prevNodes.map(node => {
-            if (nodesToGroup.some(n => n.id === node.id)) {
-                return { ...node, parentId: newFrameId };
-            }
-            return node;
-        });
-
-        return [newFrame, ...updatedNodes];
-      });
-
-      setSelectedIds(new Set([newFrameId]));
-    }
-    else if (action === 'changePhoto') { if (fileInputRef.current) fileInputRef.current.click(); return; }
-    else if (action === 'changeColor') {
-      pushHistory();
-      const targets = selectedIds.has(menu.targetId) ? selectedIds : new Set([menu.targetId]);
-      setNodes(prev => prev.map(n => targets.has(n.id) ? { ...n, color: payload } : n));
-      setDrawings(prev => prev.map(d => targets.has(d.id) ? { ...d, color: payload } : d));
-      setMenu(prev => ({ ...prev, currentColor: payload }));
-      return;
-    }
-    else if (action === 'changeTextColor') {
-      pushHistory();
-      const targets = selectedIds.has(menu.targetId) ? selectedIds : new Set([menu.targetId]);
-      setNodes(prev => prev.map(n => targets.has(n.id) ? { ...n, textColor: payload } : n));
-      setMenu(prev => ({ ...prev, currentTextColor: payload }));
-      return;
-    }
-    else if (action === 'changeFontSize') {
-      pushHistory();
-      const targets = selectedIds.has(menu.targetId) ? selectedIds : new Set([menu.targetId]);
-      setNodes(prev => prev.map(n => targets.has(n.id) ? { ...n, fontSize: payload } : n));
-      setMenu(prev => ({ ...prev, currentFontSize: payload || '16px' }));
-      return;
-    }
-    else if (action === 'changeEdgeColor') {
-      pushHistory();
-      const targets = selectedIds.has(menu.targetId) ? selectedIds : new Set([menu.targetId]);
-      setEdges(prev => prev.map(e => targets.has(e.id) ? { ...e, color: payload } : e));
-      setMenu(prev => ({ ...prev, currentColor: payload }));
-      return;
-    }
-    else if (action === 'changeEdgeStyle') {
-      pushHistory();
-      const targets = selectedIds.has(menu.targetId) ? selectedIds : new Set([menu.targetId]);
-      setEdges(prev => prev.map(e => targets.has(e.id) ? { ...e, style: payload } : e));
-      return;
-    }
-    else if (action === 'changePenColor') {
-      setPenColor(payload);
-      setDrawingTool('pen'); // 色を変えたらペンモードに戻す
-    }
-    else if (action === 'setDrawingTool') {
-      setDrawingTool(payload);
-    }
-    else if (action === 'exitDrawingMode') {
-      setIsDrawingMode(false);
-    }
-    setMenu(null);
   };
 
   return {
