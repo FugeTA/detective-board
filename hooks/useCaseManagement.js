@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { db } from '../db';
 import { DEFAULT_STATE } from './useBoardState';
 
 export const useCaseManagement = ({ nodes, edges, keywords, drawings, view, loadData }) => {
   const [currentCaseId, setCurrentCaseId] = useState(null);
   const [caseList, setCaseList] = useState([]);
-  const [saveStatus, setSaveStatus] = useState('saved');
+  const [saveStatus, setSaveStatus] = useState(null);
+  const clearStatusTimer = useRef(null);
 
   // 初期化
   useEffect(() => {
@@ -31,12 +32,24 @@ export const useCaseManagement = ({ nodes, edges, keywords, drawings, view, load
   // 自動保存
   useEffect(() => {
     if (!currentCaseId) return;
-    setSaveStatus('saving');
+    setSaveStatus(null);
+    if (clearStatusTimer.current) {
+      clearTimeout(clearStatusTimer.current);
+      clearStatusTimer.current = null;
+    }
+
     const handler = setTimeout(async () => {
+      setSaveStatus('saving');
       try {
         await db.saves.update(currentCaseId, { nodes, edges, keywords, view, drawings, updatedAt: Date.now() });
         setSaveStatus('saved');
         setCaseList(prev => prev.map(c => c.id === currentCaseId ? { ...c, updatedAt: Date.now() } : c));
+        
+        // 1秒後にフェードアウト開始、さらに1秒後に完全に消去
+        clearStatusTimer.current = setTimeout(() => {
+          setSaveStatus('saved-fading');
+          clearStatusTimer.current = setTimeout(() => setSaveStatus(null), 1000);
+        }, 1000);
       } catch (error) {
         console.error("Save failed:", error);
         setSaveStatus('error');

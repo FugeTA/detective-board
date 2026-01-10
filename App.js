@@ -44,10 +44,12 @@ function App() {
         padding: '2px 8px',
         backgroundColor: 'rgba(0,0,0,0.3)',
         borderRadius: '10px',
-        pointerEvents: 'none'
+        pointerEvents: 'none',
+        opacity: saveStatus === 'saved-fading' ? 0 : 1,
+        transition: 'opacity 1s ease-out'
       }}>
         {saveStatus === 'saving' && '💾 Saving...'}
-        {saveStatus === 'saved' && '✅ Saved'}
+        {(saveStatus === 'saved' || saveStatus === 'saved-fading') && '✅ Saved'}
         {saveStatus === 'error' && '❌ Error!'}
       </div>
 
