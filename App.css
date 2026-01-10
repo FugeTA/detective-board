@@ -17,6 +17,11 @@ body {
   /* 背景ドットはApp.jsのstyleで制御 */
 }
 
+/* 描画モードの時はカーソルを変更 */
+.board.drawing-mode {
+  cursor: crosshair;
+}
+
 /* 拡大縮小・移動するレイヤー */
 .transform-layer {
   width: 100%;
@@ -70,13 +75,38 @@ body {
   cursor: pointer;
 }
 
-/* ツールバー（さらに右へずらす） */
+/* ツールバー（描画ボタンなど） */
 .toolbar {
   position: absolute;
   top: 20px;
-  left: 250px; /* ボタン2つ分回避 */
+  right: 20px; /* 右上に変更 */
   z-index: 1000;
+  display: flex;
+  gap: 10px;
 }
+
+.tool-button {
+  background: #333;
+  color: white;
+  border: 1px solid #555;
+  padding: 10px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.tool-button:hover {
+  background: #444;
+}
+
+.tool-button.active {
+  background: #ff4d4d;
+  color: white;
+  border-color: #ff4d4d;
+}
+
 
 /* ケースサイドバー */
 .case-sidebar {
@@ -100,6 +130,9 @@ body {
   width: 100%;
   margin-bottom: 15px;
   background: #444;
+  color: white;
+  border: 1px solid #555;
+  cursor: pointer;
 }
 .case-list { flex: 1; overflow-y: auto; }
 
@@ -123,6 +156,48 @@ body {
 .case-delete { background: transparent; border: none; color: #666; font-size: 1.2rem; margin-left: 5px; }
 .case-delete:hover { color: #ff4d4d; }
 
+
+/* コンテキストメニュー */
+.context-menu {
+  position: absolute;
+  background: rgba(40, 40, 40, 0.95);
+  border: 1px solid #666;
+  border-radius: 6px;
+  padding: 5px 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 9999;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+  min-width: 160px;
+  backdrop-filter: blur(5px);
+}
+
+.context-menu button {
+  background: transparent;
+  color: #eee;
+  border: none;
+  text-align: left;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.9rem;
+  transition: background 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.context-menu button:hover {
+  background: #ff4d4d;
+  color: white;
+}
+
+.menu-divider {
+  height: 1px;
+  background: #555;
+  margin: 4px 0;
+}
 
 /* =========================================
    3. ノートブック (サイドバー)
@@ -297,9 +372,6 @@ body {
 }
 .rotate-handle:active { cursor: grabbing; background: #eee; }
 
-/* 削除ボタン (ホバー時のみ表示) */
-/* ※今回は右クリックメニューに統合したため削除しましたが、もし使うならここ */
-
 /* =========================================
    5. タイプ別スタイル (写真 vs メモ)
    ========================================= */
@@ -308,7 +380,6 @@ body {
 .node.photo {
   background: white;
   padding-bottom: 10px;
-  /* 写真っぽく少し傾ける初期設定(JSのrotationで上書きされます) */
 }
 
 /* メモタイプ (.note) */
@@ -323,11 +394,8 @@ body {
 /* 画像表示エリア */
 .photo-inner {
   width: 100%;
-  
-  /* 写真エリアは拡大しない(flex:0)・縮小もしない(flex:0)・サイズは中身次第(auto) */
   flex: 0 0 auto; 
   height: auto;
-
   background-color: #333;
   display: flex;
   align-items: center;
@@ -335,28 +403,22 @@ body {
   color: #777;
   font-size: 0.8rem;
   overflow: hidden;
-  
-  /* 画像の表示設定 */
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  
-  /* 画像がない時の最低限の高さ */
   min-height: 150px;
 }
 
 .photo-inner.has-image {
-  min-height: 0; /* 画像があるときは比率に従う */
+  min-height: 0;
   background-color: transparent;
 }
 
 /* テキスト入力エリア */
 textarea.note-input {
   width: 100%;
-  /* 親(node)がflexなので、高さを100%にすれば追従する */
   height: 100%;
-  
-  background: rgba(255, 255, 255, 0.5); /* 少し透過させて背景色となじませる */
+  background: rgba(255, 255, 255, 0.5);
   border: none;
   resize: none;
   outline: none;
@@ -385,4 +447,63 @@ textarea.note-input {
   background-color: rgba(0, 210, 255, 0.2); /* 半透明の水色 */
   z-index: 9999; /* 最前面 */
   pointer-events: none; /* マウスイベントを邪魔しない */
+}
+
+/* =========================================
+   7. 描画モード
+   ========================================= */
+
+/* フレームタイプ (.frame) */
+.node.frame {
+  background: rgba(100, 120, 180, 0.15);
+  border: 1px dashed rgba(150, 170, 220, 0.6);
+  z-index: 0; /* 他のノードより背面 */
+  padding-top: 25px; /* タイトル分のスペース */
+}
+
+/* フレーム内のピンとハンドルを調整 */
+.node.frame .pin {
+  top: 5px; /* 上に移動 */
+}
+.node.frame .rotate-handle {
+  top: 2px;
+  right: 5px;
+}
+
+/* フレームのタイトル */
+.frame-title {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 4px 8px;
+  font-weight: bold;
+  color: rgba(230, 230, 255, 0.9);
+  font-size: 0.9rem;
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* 既存の継承スタイルをリセット */
+  flex: none !important;
+  white-space: nowrap !important;
+  height: auto !important;
+  min-height: auto !important;
+  pointer-events: auto !important;
+  overflow: hidden !important;
+}
+
+
+/* タイトル編集中のスタイル */
+textarea.frame-title {
+  background: rgba(150, 170, 220, 0.2) !important;
+  border: 1px solid rgba(150, 170, 220, 0.5) !important;
+  color: white !important;
+  padding: 3px 8px !important;
+  border-radius: 4px;
+  /* 既存の継承スタイルをリセット */
+  flex: none !important;
+  height: 25px !important;
+  min-height: auto !important;
+  resize: none !important;
 }

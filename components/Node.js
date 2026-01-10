@@ -39,7 +39,12 @@ const Node = ({
       className={`node ${node.type} ${isSelected ? 'selected' : ''}`} 
       style={{ 
         left: node.x, top: node.y, width: node.width, height: node.height,
-        transform: `rotate(${node.rotation || 0}deg)`
+        transform: `rotate(${node.rotation || 0}deg)`,
+        backgroundColor: node.color,
+        opacity: node.type === 'frame' ? 0.5 : 1,
+        border: isSelected ? '2px solid #2196f3' : (node.type === 'frame' ? '2px dashed #ccc' : '1px solid #ccc'),
+        boxShadow: isSelected ? '0 0 8px rgba(33, 150, 243, 0.5)' : 'none',
+        zIndex: isSelected ? 1000 : (node.type === 'frame' ? 0 : 10)
       }}
       onMouseDown={(e) => onMouseDown(e, node)}
       onContextMenu={(e) => onContextMenu(e, node)}

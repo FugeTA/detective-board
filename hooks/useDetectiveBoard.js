@@ -5,21 +5,34 @@ import { getPinLocation } from '../utils/math';
 // デフォルトデータ
 const DEFAULT_STATE = {
   nodes: [
-    { id: 1, x: 100, y: 150, width: 220, height: 260, type: 'photo', content: 'Suspect A', imageSrc: null, rotation: -5 },
+    { id: 1, x: 100, y: 150, width: 220, height: 260, type: 'photo', content: 'Suspect A', imageSrc: null, rotation: -5, parentId: null },
   ],
   edges: [],
   keywords: [],
+  drawings: [], // ★描画データを追加
   view: { x: 0, y: 0, scale: 1 }
+};
+
+// ヘルパー関数：点と線分の距離
+const distanceToSegment = (p, v, w) => {
+  const l2 = (v.x - w.x) ** 2 + (v.y - w.y) ** 2;
+  if (l2 === 0) return Math.hypot(p.x - v.x, p.y - v.y);
+  let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
+};
+
+const isPointNearDrawing = (x, y, drawing, threshold) => {
+  if (!drawing.points || drawing.points.length < 2) return false;
+  return drawing.points.some((p, i) => {
+    if (i === 0) return false;
+    return distanceToSegment({x, y}, drawing.points[i-1], p) < threshold;
+  });
 };
 
 export const useDetectiveBoard = () => {
   // --- State ---
-  
-  // ★変更: サイドバーの状態を1つの変数で管理（排他制御）
-  // null = 閉, 'notebook' = ノート, 'case' = ケース
   const [activeSidebar, setActiveSidebar] = useState(null);
-
-  // App.js側に渡すためのフラグを計算
   const isNotebookOpen = activeSidebar === 'notebook';
   const isCaseManagerOpen = activeSidebar === 'case';
 
@@ -30,6 +43,7 @@ export const useDetectiveBoard = () => {
   const [edges, setEdges] = useState([]);
   const [keywords, setKeywords] = useState([]);
   const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
+  const [drawings, setDrawings] = useState([]); // ★描画配列
   
   // UI操作系
   const [editingId, setEditingId] = useState(null);
@@ -41,6 +55,13 @@ export const useDetectiveBoard = () => {
   const [selectionBox, setSelectionBox] = useState(null);
   const [menu, setMenu] = useState(null); 
   const [saveStatus, setSaveStatus] = useState('saved');
+
+  // ★描画モード系
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [currentDrawing, setCurrentDrawing] = useState(null);
+  const [penColor, setPenColor] = useState('#000000'); // ペンの色
+  const [drawingTool, setDrawingTool] = useState('pen'); // 'pen' or 'eraser'
+  const [isErasing, setIsErasing] = useState(false);
   
   const fileInputRef = useRef(null);
   const [history, setHistory] = useState([]);
@@ -71,6 +92,7 @@ export const useDetectiveBoard = () => {
     setNodes(data.nodes || []);
     setEdges(data.edges || []);
     setKeywords(data.keywords || []);
+    setDrawings(data.drawings || []); // ★描画データをロード
     setView(data.view || { x: 0, y: 0, scale: 1 });
     setHistory([]);
   };
@@ -81,7 +103,7 @@ export const useDetectiveBoard = () => {
     setSaveStatus('saving');
     const handler = setTimeout(async () => {
       try {
-        await db.saves.update(currentCaseId, { nodes, edges, keywords, view, updatedAt: Date.now() });
+        await db.saves.update(currentCaseId, { nodes, edges, keywords, view, drawings, updatedAt: Date.now() }); // ★描画データを保存
         setSaveStatus('saved');
         setCaseList(prev => prev.map(c => c.id === currentCaseId ? { ...c, updatedAt: Date.now() } : c));
       } catch (error) {
@@ -90,28 +112,34 @@ export const useDetectiveBoard = () => {
       }
     }, 1000);
     return () => clearTimeout(handler);
-  }, [nodes, edges, keywords, view, currentCaseId]);
+  }, [nodes, edges, keywords, view, drawings, currentCaseId]); // ★drawingsを追加
 
   // --- 履歴管理 ---
-  const pushHistory = useCallback(() => { setHistory(prev => [...prev.slice(-49), { nodes, edges }]); }, [nodes, edges]);
-  const pushSpecificHistory = (pastNodes, pastEdges) => { setHistory(prev => [...prev.slice(-49), { nodes: pastNodes, edges: pastEdges }]); };
+  const pushHistory = useCallback(() => { setHistory(prev => [...prev.slice(-49), { nodes, edges, drawings }]); }, [nodes, edges, drawings]);
+  const pushSpecificHistory = (pastNodes, pastEdges, pastDrawings) => { setHistory(prev => [...prev.slice(-49), { nodes: pastNodes, edges: pastEdges, drawings: pastDrawings }]); };
   const undo = useCallback(() => {
     if (history.length === 0) return;
     const lastState = history[history.length - 1];
     setHistory(prev => prev.slice(0, -1));
     setNodes(lastState.nodes);
     setEdges(lastState.edges);
+    setDrawings(lastState.drawings); // ★描画もUndo
     setSelectedIds(new Set());
   }, [history]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (editingId !== null) return;
+      // Escキーで描画モードをオフ
+      if (e.key === 'Escape') {
+        setIsDrawingMode(false);
+      }
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (selectedIds.size > 0) {
           e.preventDefault(); pushHistory();
           setNodes(prev => prev.filter(n => !selectedIds.has(n.id)));
           setEdges(prev => prev.filter(edge => !selectedIds.has(edge.from) && !selectedIds.has(edge.to)));
+          setDrawings(prev => prev.filter(d => !selectedIds.has(d.id)));
           setSelectedIds(new Set());
         }
       }
@@ -158,6 +186,7 @@ export const useDetectiveBoard = () => {
             imageSrc: base64,
             rotation: (Math.random() * 10) - 5,
             aspectRatio: ratio,
+            parentId: null,
           };
           setNodes(prev => [...prev, newNode]);
           setSelectedIds(new Set([newId]));
@@ -173,12 +202,12 @@ export const useDetectiveBoard = () => {
   // --- Case Actions ---
   const openCase = async (id) => {
     if (id === currentCaseId) return;
-    await db.saves.update(currentCaseId, { nodes, edges, keywords, view, updatedAt: Date.now() });
+    await db.saves.update(currentCaseId, { nodes, edges, keywords, view, drawings, updatedAt: Date.now() });
     const targetCase = await db.saves.get(id);
     if (targetCase) {
       setCurrentCaseId(id);
       loadCaseData(targetCase);
-      setActiveSidebar(null); // ★変更: 選択したら閉じる
+      setActiveSidebar(null);
     }
   };
 
@@ -216,7 +245,6 @@ export const useDetectiveBoard = () => {
 
   const caseActions = {
     openCase, createCase, deleteCase, renameCase,
-    // ★変更: ケースを開閉する（もし既に開いていれば閉じ、そうでなければ開く）
     toggleOpen: () => setActiveSidebar(prev => prev === 'case' ? null : 'case')
   };
 
@@ -225,12 +253,23 @@ export const useDetectiveBoard = () => {
     addKeyword: (text) => setKeywords(prev => [...prev, { id: Date.now(), text, active: true }]),
     deleteKeyword: (id) => setKeywords(prev => prev.filter(k => k.id !== id)),
     toggleKeyword: (id) => setKeywords(prev => prev.map(k => k.id === id ? { ...k, active: !k.active } : k)),
-    // ★変更: ノートを開閉する
     toggleOpen: () => setActiveSidebar(prev => prev === 'notebook' ? null : 'notebook')
+  };
+  
+  // ★描画アクション
+  const drawingActions = {
+    toggleDrawingMode: () => setIsDrawingMode(prev => !prev),
+    clearDrawings: () => {
+      if (window.confirm('すべての手書き線を消去しますか？')) {
+        pushHistory();
+        setDrawings([]);
+      }
+    }
   };
 
   // --- Main Board Handlers ---
   const handleWheel = (e) => {
+    if (isDrawingMode) { e.preventDefault(); return; } // 描画中はズームしない
     e.preventDefault();
     const d = -e.deltaY * 0.001;
     const s = Math.min(5, Math.max(0.1, view.scale + d));
@@ -238,25 +277,119 @@ export const useDetectiveBoard = () => {
     setView({ x: e.clientX - (e.clientX - view.x) * r, y: e.clientY - (e.clientY - view.y) * r, scale: s });
   };
 
+  // 消しゴム機能
+  const eraseAt = (clientX, clientY) => {
+    const worldX = (clientX - view.x) / view.scale;
+    const worldY = (clientY - view.y) / view.scale;
+    const threshold = 20 / view.scale; // 消しゴムの判定範囲
+
+    setDrawings(prev => {
+      const remaining = prev.filter(d => {
+        // 線を構成する点のいずれかが範囲内にあるかチェック
+        return !d.points.some(p => Math.hypot(p.x - worldX, p.y - worldY) < threshold);
+      });
+      return remaining.length !== prev.length ? remaining : prev;
+    });
+  };
+
   const handleBoardMouseDown = (e) => {
     if (e.button === 2) return;
+
+    // ★描画モードの処理
+    if (isDrawingMode) {
+      e.stopPropagation();
+      if (drawingTool === 'eraser') {
+        pushHistory();
+        setIsErasing(true);
+        eraseAt(e.clientX, e.clientY);
+      } else {
+        const point = { x: (e.clientX - view.x) / view.scale, y: (e.clientY - view.y) / view.scale };
+        setCurrentDrawing({
+          id: `draw-${Date.now()}`,
+          points: [point],
+          color: penColor,
+        });
+      }
+      return;
+    }
+
     setEditingId(null); setMenu(null);
     if (e.shiftKey) {
       const worldX = (e.clientX - view.x) / view.scale;
       const worldY = (e.clientY - view.y) / view.scale;
       setSelectionBox({ startX: worldX, startY: worldY, curX: worldX, curY: worldY });
     } else {
+      // 線の選択判定
+      const worldX = (e.clientX - view.x) / view.scale;
+      const worldY = (e.clientY - view.y) / view.scale;
+      const hitThreshold = 10 / view.scale;
+      let hitDrawing = null;
+      // 上にあるもの（配列の後ろ）から判定
+      for (let i = drawings.length - 1; i >= 0; i--) {
+        if (isPointNearDrawing(worldX, worldY, drawings[i], hitThreshold)) {
+          hitDrawing = drawings[i];
+          break;
+        }
+      }
+
+      if (hitDrawing) {
+        e.stopPropagation();
+        if (!selectedIds.has(hitDrawing.id)) {
+          setSelectedIds(new Set([hitDrawing.id]));
+        }
+        snapshotRef.current = { nodes, edges, drawings };
+        setDragInfo({ type: 'move', id: hitDrawing.id, startX: e.clientX, startY: e.clientY });
+        return;
+      }
+
       setSelectedIds(new Set());
       setIsPanning(true); setPanStart({ x: e.clientX - view.x, y: e.clientY - view.y });
     }
   };
 
   const handleBoardContextMenu = (e) => {
-    e.preventDefault(); setEditingId(null); setSelectedIds(new Set());
+    e.preventDefault(); setEditingId(null);
+    if (isDrawingMode) {
+      setMenu({ type: 'drawing', left: e.clientX, top: e.clientY, currentTool: drawingTool });
+      return;
+    }
+
+    // 線の右クリック判定
+    const worldX = (e.clientX - view.x) / view.scale;
+    const worldY = (e.clientY - view.y) / view.scale;
+    const hitThreshold = 10 / view.scale;
+    let hitDrawing = null;
+    for (let i = drawings.length - 1; i >= 0; i--) {
+      if (isPointNearDrawing(worldX, worldY, drawings[i], hitThreshold)) {
+        hitDrawing = drawings[i];
+        break;
+      }
+    }
+
+    if (hitDrawing) {
+      if (!selectedIds.has(hitDrawing.id)) {
+        setSelectedIds(new Set([hitDrawing.id]));
+      }
+      setMenu({ type: 'node', targetId: hitDrawing.id, nodeType: 'drawing', left: e.clientX, top: e.clientY });
+      return;
+    }
+
+    setSelectedIds(new Set());
     setMenu({ type: 'board', left: e.clientX, top: e.clientY, worldX: (e.clientX - view.x) / view.scale, worldY: (e.clientY - view.y) / view.scale });
   };
 
   const handleMouseMove = (e) => {
+    // ★描画中の処理
+    if (isDrawingMode) {
+      if (isErasing) {
+        eraseAt(e.clientX, e.clientY);
+      } else if (currentDrawing) {
+        const newPoint = { x: (e.clientX - view.x) / view.scale, y: (e.clientY - view.y) / view.scale };
+        setCurrentDrawing(prev => ({...prev, points: [...prev.points, newPoint]}));
+      }
+      return;
+    }
+
     if (selectionBox) {
       const worldX = (e.clientX - view.x) / view.scale;
       const worldY = (e.clientY - view.y) / view.scale;
@@ -265,6 +398,7 @@ export const useDetectiveBoard = () => {
     }
     if (isPanning) { setView({ ...view, x: e.clientX - panStart.x, y: e.clientY - panStart.y }); return; }
     if (dragInfo) {
+      if (!snapshotRef.current) return; // Add a guard clause
       const worldMouseX = (e.clientX - view.x) / view.scale;
       const worldMouseY = (e.clientY - view.y) / view.scale;
       if (dragInfo.type === 'rotate') {
@@ -272,12 +406,42 @@ export const useDetectiveBoard = () => {
       } else {
         const dx = (e.clientX - dragInfo.startX) / view.scale;
         const dy = (e.clientY - dragInfo.startY) / view.scale;
-        setNodes(prev => prev.map(n => {
-          if (n.id === dragInfo.id) {
-            if (dragInfo.type === 'move') return { ...n, x: dragInfo.initialNode.x + dx, y: dragInfo.initialNode.y + dy };
-            if (dragInfo.type === 'resize') return { ...n, width: Math.max(100, dragInfo.initialNode.width + dx), height: Math.max(100, dragInfo.initialNode.height + dy) };
+        
+        const snapshot = snapshotRef.current;
+        const initialDraggedNode = snapshot.nodes.find(n => n.id === dragInfo.id);
+        
+        const isFrameMove = initialDraggedNode && initialDraggedNode.type === 'frame' && dragInfo.type === 'move';
+        
+        const childIdsToMove = isFrameMove
+            ? new Set(snapshot.nodes.filter(n => n.parentId === dragInfo.id).map(n => n.id))
+            : new Set();
+
+        setNodes(currentNodes => currentNodes.map(node => {
+            const originalNodeState = snapshot.nodes.find(n => n.id === node.id);
+            if (!originalNodeState) return node;
+
+            if (dragInfo.type === 'move') {
+                if (node.id === dragInfo.id || selectedIds.has(node.id) || (isFrameMove && childIdsToMove.has(node.id))) {
+                    return { ...node, x: originalNodeState.x + dx, y: originalNodeState.y + dy };
+                }
+            } else if (dragInfo.type === 'resize' && node.id === dragInfo.id) {
+                return { ...node, width: Math.max(100, originalNodeState.width + dx), height: Math.max(100, originalNodeState.height + dy) };
+            }
+
+
+            return node;
+        }));
+
+        // 線の移動
+        setDrawings(currentDrawings => currentDrawings.map(drawing => {
+          const originalDrawing = snapshot.drawings.find(d => d.id === drawing.id);
+          if (!originalDrawing) return drawing;
+
+          if (selectedIds.has(drawing.id) || drawing.id === dragInfo.id) {
+             const newPoints = originalDrawing.points.map(p => ({ x: p.x + dx, y: p.y + dy }));
+             return { ...drawing, points: newPoints };
           }
-          return n;
+          return drawing;
         }));
       }
     }
@@ -285,6 +449,18 @@ export const useDetectiveBoard = () => {
   };
 
   const handleMouseUp = (e) => {
+    // ★描画完了の処理
+    if (isDrawingMode) {
+      if (isErasing) {
+        setIsErasing(false);
+      } else if (currentDrawing) {
+        pushHistory(); // 描画前に履歴保存
+        setDrawings(prev => [...prev, currentDrawing]);
+        setCurrentDrawing(null);
+      }
+      return;
+    }
+
     if (selectionBox) {
       const x1 = Math.min(selectionBox.startX, selectionBox.curX);
       const x2 = Math.max(selectionBox.startX, selectionBox.curX);
@@ -296,12 +472,50 @@ export const useDetectiveBoard = () => {
         const cy = node.y + node.height / 2;
         if (cx >= x1 && cx <= x2 && cy >= y1 && cy <= y2) newSelectedIds.add(node.id);
       });
+      // 手書き線の範囲選択
+      drawings.forEach(d => {
+        if (d.points.some(p => p.x >= x1 && p.x <= x2 && p.y >= y1 && p.y <= y2)) {
+          newSelectedIds.add(d.id);
+        }
+      });
       setSelectedIds(newSelectedIds);
       setSelectionBox(null);
       return;
     }
     setIsPanning(false);
-    if (dragInfo && snapshotRef.current) { pushHistory(); snapshotRef.current = null; }
+    if (dragInfo && snapshotRef.current) {
+      const pastState = snapshotRef.current;
+      pushSpecificHistory(pastState.nodes, pastState.edges, pastState.drawings);
+      snapshotRef.current = null;
+
+      // 自動グループ化のロジック
+      if (dragInfo.type === 'move') {
+        setNodes(prevNodes => {
+          const targetNode = prevNodes.find(n => n.id === dragInfo.id);
+          // フレーム自体はグループ化しない
+          if (!targetNode || targetNode.type === 'frame') return prevNodes;
+
+          const centerX = targetNode.x + targetNode.width / 2;
+          const centerY = targetNode.y + targetNode.height / 2;
+
+          let newParentId = null;
+
+          // 中心点が含まれるフレームを探す（後勝ち＝上にあるフレーム優先）
+          prevNodes.forEach(node => {
+            if (node.type === 'frame' && node.id !== targetNode.id) {
+              if (centerX >= node.x && centerX <= node.x + node.width && centerY >= node.y && centerY <= node.y + node.height) {
+                newParentId = node.id;
+              }
+            }
+          });
+
+          if (targetNode.parentId !== newParentId) {
+            return prevNodes.map(n => n.id === targetNode.id ? { ...n, parentId: newParentId } : n);
+          }
+          return prevNodes;
+        });
+      }
+    }
     setDragInfo(null);
     if (connectionDraft) {
       setMenu({ type: 'connection', sourceId: connectionDraft.sourceId, left: e.clientX, top: e.clientY, worldX: (e.clientX - view.x) / view.scale, worldY: (e.clientY - view.y) / view.scale });
@@ -311,46 +525,62 @@ export const useDetectiveBoard = () => {
 
   const nodeActions = {
     onMouseDown: (e, node) => {
+      if (isDrawingMode) return;
       e.stopPropagation();
+      setMenu(null);
       if (e.shiftKey) {
         setSelectedIds(prev => { const next = new Set(prev); if (next.has(node.id)) next.delete(node.id); else next.add(node.id); return next; });
         return;
       }
       if (!selectedIds.has(node.id)) setSelectedIds(new Set([node.id]));
       if (editingId === node.id) return;
-      snapshotRef.current = { nodes, edges };
+      snapshotRef.current = { nodes, edges, drawings };
       setDragInfo({ type: 'move', id: node.id, startX: e.clientX, startY: e.clientY, initialNode: { ...node } });
     },
     onContextMenu: (e, node) => {
-      e.preventDefault(); e.stopPropagation(); setSelectedIds(new Set([node.id]));
+      e.preventDefault(); e.stopPropagation(); 
+      if (!selectedIds.has(node.id)) {
+        setSelectedIds(new Set([node.id]));
+      }
       setMenu({ type: 'node', targetId: node.id, nodeType: node.type, left: e.clientX, top: e.clientY });
     },
-    onDoubleClick: (e, id) => { e.stopPropagation(); snapshotRef.current = { nodes, edges }; setEditingId(id); },
+    onDoubleClick: (e, id) => { e.stopPropagation(); snapshotRef.current = { nodes, edges, drawings }; setEditingId(id); },
     onPinMouseDown: (e, id) => {
+      if (isDrawingMode) return;
       e.stopPropagation(); e.preventDefault(); setMenu(null);
       const node = nodes.find(n => n.id === id);
       const pinLoc = getPinLocation(node);
       setConnectionDraft({ sourceId: id, startX: pinLoc.x, startY: pinLoc.y, currX: pinLoc.x, currY: pinLoc.y });
     },
     onPinMouseUp: (e, id) => {
+      if (isDrawingMode) return;
       e.stopPropagation();
+      setMenu(null);
       if (connectionDraft && connectionDraft.sourceId !== id) { setEdges([...edges, { from: connectionDraft.sourceId, to: id }]); }
       setConnectionDraft(null);
     },
     onRotateMouseDown: (e, node) => {
-      e.stopPropagation(); e.preventDefault(); snapshotRef.current = { nodes, edges };
+      if (isDrawingMode) return;
+      e.stopPropagation(); e.preventDefault(); snapshotRef.current = { nodes, edges, drawings };
+      setMenu(null);
       const centerX = node.x + node.width / 2;
       const centerY = node.y + node.height / 2;
       setDragInfo({ type: 'rotate', id: node.id, centerX, centerY, initialNode: { ...node } });
     },
     onRotateReset: (e, id) => { e.stopPropagation(); pushHistory(); setNodes(prev => prev.map(n => n.id === id ? { ...n, rotation: 0 } : n)); },
     onResizeMouseDown: (e, node) => {
-      e.stopPropagation(); snapshotRef.current = { nodes, edges };
+      if (isDrawingMode) return;
+      e.stopPropagation(); snapshotRef.current = { nodes, edges, drawings };
+      setMenu(null);
       setDragInfo({ type: 'resize', id: node.id, startX: e.clientX, startY: e.clientY, initialNode: { ...node } });
     },
     onContentChange: (id, val) => setNodes(nodes.map(n => n.id === id ? { ...n, content: val } : n)),
     onBlur: () => {
-      if (snapshotRef.current) { pushSpecificHistory(snapshotRef.current.nodes, snapshotRef.current.edges); snapshotRef.current = null; }
+      if (snapshotRef.current) { 
+        const pastState = snapshotRef.current;
+        pushSpecificHistory(pastState.nodes, pastState.edges, pastState.drawings);
+        snapshotRef.current = null;
+      }
       setEditingId(null);
     }
   };
@@ -379,26 +609,96 @@ export const useDetectiveBoard = () => {
     if (action === 'addNode') {
       pushHistory();
       const newId = Date.now();
-      const newNode = { id: newId, x: menu.worldX, y: menu.worldY, width: 180, height: payload === 'photo' ? 220 : 150, type: payload, content: '', imageSrc: null, rotation: (Math.random() * 30) - 15 };
+      let newNode;
+      if (payload === 'frame') {
+        newNode = { id: newId, x: menu.worldX, y: menu.worldY, width: 400, height: 300, type: 'frame', content: 'Group', imageSrc: null, rotation: 0, parentId: null };
+      } else {
+        newNode = { id: newId, x: menu.worldX, y: menu.worldY, width: 180, height: payload === 'photo' ? 220 : 150, type: payload, content: '', imageSrc: null, rotation: (Math.random() * 30) - 15, parentId: null };
+      }
       setNodes([...nodes, newNode]);
       if (menu.type === 'connection') { setEdges([...edges, { from: menu.sourceId, to: newNode.id }]); }
       setEditingId(newId); setSelectedIds(new Set([newId]));
     } 
     else if (action === 'delete') { 
       pushHistory();
-      setNodes(nodes.filter(n => n.id !== menu.targetId)); setEdges(edges.filter(e => e.from !== menu.targetId && e.to !== menu.targetId));
-      if (selectedIds.has(menu.targetId)) setSelectedIds(new Set());
+      const targets = selectedIds.has(menu.targetId) ? selectedIds : new Set([menu.targetId]);
+      setNodes(nodes.filter(n => !targets.has(n.id))); setEdges(edges.filter(e => !targets.has(e.from) && !targets.has(e.to)));
+      setDrawings(drawings.filter(d => !targets.has(d.id)));
+      setSelectedIds(new Set());
     }
     else if (action === 'edit') { setEditingId(menu.targetId); }
+    else if (action === 'groupInFrame') {
+      if (selectedIds.size < 1) { setMenu(null); return; }
+      pushHistory();
+
+      const newFrameId = Date.now(); // IDを先に生成
+
+      setNodes(prevNodes => {
+        const nodesToGroup = prevNodes.filter(n => selectedIds.has(n.id));
+        if (nodesToGroup.length < 1) {
+            return prevNodes;
+        }
+
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        nodesToGroup.forEach(node => {
+            minX = Math.min(minX, node.x);
+            minY = Math.min(minY, node.y);
+            maxX = Math.max(maxX, node.x + node.width);
+            maxY = Math.max(maxY, node.y + node.height);
+        });
+
+        const padding = 40;
+        const frameX = minX - padding;
+        const frameY = minY - padding;
+        const frameWidth = (maxX - minX) + (padding * 2);
+        const frameHeight = (maxY - minY) + (padding * 2);
+
+        const newFrame = {
+            id: newFrameId, x: frameX, y: frameY,
+            width: frameWidth, height: frameHeight,
+            type: 'frame', content: 'New Group',
+            imageSrc: null, rotation: 0, parentId: null
+        };
+
+        const updatedNodes = prevNodes.map(node => {
+            if (nodesToGroup.some(n => n.id === node.id)) {
+                return { ...node, parentId: newFrameId };
+            }
+            return node;
+        });
+
+        return [newFrame, ...updatedNodes];
+      });
+
+      setSelectedIds(new Set([newFrameId]));
+    }
     else if (action === 'changePhoto') { if (fileInputRef.current) fileInputRef.current.click(); return; }
+    else if (action === 'changeColor') {
+      pushHistory();
+      const targets = selectedIds.has(menu.targetId) ? selectedIds : new Set([menu.targetId]);
+      setNodes(prev => prev.map(n => targets.has(n.id) ? { ...n, color: payload } : n));
+      setDrawings(prev => prev.map(d => targets.has(d.id) ? { ...d, color: payload } : d));
+      return;
+    }
+    else if (action === 'changePenColor') {
+      setPenColor(payload);
+      setDrawingTool('pen'); // 色を変えたらペンモードに戻す
+    }
+    else if (action === 'setDrawingTool') {
+      setDrawingTool(payload);
+    }
+    else if (action === 'exitDrawingMode') {
+      setIsDrawingMode(false);
+    }
     setMenu(null);
   };
 
   return {
     nodes, edges, view, menu, keywords, editingId, selectedIds, connectionDraft, selectionBox, fileInputRef, saveStatus,
-    isNotebookOpen, isCaseManagerOpen, // 計算された boolean 値を返す
+    isNotebookOpen, isCaseManagerOpen,
     currentCaseId, caseList,
+    drawings: drawings.map(d => ({ ...d, selected: selectedIds.has(d.id) })), currentDrawing, isDrawingMode, penColor, drawingTool, // ★描画用state
     handleWheel, handleBoardMouseDown, handleBoardContextMenu, handleMouseMove, handleMouseUp,
-    notebookActions, nodeActions, menuAction, caseActions, handleImageUpload
+    notebookActions, nodeActions, menuAction, caseActions, handleImageUpload, drawingActions, // ★描画アクション
   };
 };
