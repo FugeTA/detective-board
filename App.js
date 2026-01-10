@@ -8,6 +8,7 @@ import ContextMenu from './components/ContextMenu';
 import CaseManager from './components/CaseManager';
 import DrawingLayer from './components/DrawingLayer'; // ★描画レイヤーを追加
 import { Pencil, Trash2, Save, Check, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function App() {
   const {
@@ -34,25 +35,23 @@ function App() {
     >
       <input type="file" ref={fileInputRef} style={{display: 'none'}} accept="image/*" onChange={handleImageUpload} />
       
-      <div style={{
-        color: 'white',
-        fontSize: '0.8rem',
-        position: 'absolute',
-        top: '10px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 10,
-        padding: '2px 8px',
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        borderRadius: '10px',
-        pointerEvents: 'none',
-        opacity: saveStatus === 'saved-fading' ? 0 : 1,
-        transition: 'opacity 1s ease-out'
-      }}>
-        {saveStatus === 'saving' && <span style={{display:'flex', alignItems:'center', gap:'4px'}}><Save size={14}/> Saving...</span>}
-        {(saveStatus === 'saved' || saveStatus === 'saved-fading') && <span style={{display:'flex', alignItems:'center', gap:'4px'}}><Check size={14}/> Saved</span>}
-        {saveStatus === 'error' && <span style={{display:'flex', alignItems:'center', gap:'4px'}}><X size={14}/> Error!</span>}
-      </div>
+      <AnimatePresence>
+        {saveStatus && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: -20, x: '-50%' }}
+            style={{
+              color: 'white', fontSize: '0.8rem', position: 'absolute', top: '10px', left: '50%',
+              zIndex: 10, padding: '2px 8px', backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: '10px', pointerEvents: 'none'
+            }}
+          >
+            {saveStatus === 'saving' && <span style={{display:'flex', alignItems:'center', gap:'4px'}}><Save size={14}/> Saving...</span>}
+            {saveStatus === 'saved' && <span style={{display:'flex', alignItems:'center', gap:'4px'}}><Check size={14}/> Saved</span>}
+            {saveStatus === 'error' && <span style={{display:'flex', alignItems:'center', gap:'4px'}}><X size={14}/> Error!</span>}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ツールバー */}
       <div className="toolbar">
@@ -128,7 +127,9 @@ function App() {
           />
         ))}
       </div>
-      <ContextMenu menu={menu} onAction={menuAction} selectedIds={selectedIds} />
+      <AnimatePresence>
+        {menu && <ContextMenu menu={menu} onAction={menuAction} selectedIds={selectedIds} />}
+      </AnimatePresence>
       
       {fullscreenImage && (
         <div 

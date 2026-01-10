@@ -1,6 +1,7 @@
 // src/components/CaseManager.js
 import React, { useState } from 'react';
 import { Folder, Plus, X } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const CaseManager = ({ 
   isOpen, 
@@ -31,7 +32,13 @@ const CaseManager = ({
         <Folder size={16} style={{marginRight: '4px'}} /> {isOpen ? 'Close' : 'Cases'}
       </button>
 
-      <div className={`case-sidebar ${isOpen ? 'open' : ''}`} onMouseDown={e => e.stopPropagation()}>
+      <motion.div 
+        className="case-sidebar"
+        initial={{ x: '-100%' }}
+        animate={{ x: isOpen ? 0 : '-100%' }}
+        transition={{ type: 'tween', ease: 'easeInOut', duration: 0.1 }}
+        onMouseDown={e => e.stopPropagation()}
+      >
         <h3>Case Files</h3>
         
         <button className="create-case-btn" onClick={onCreateCase}>
@@ -79,7 +86,7 @@ const CaseManager = ({
             </div>
           ))}
         </div>
-      </div>
+      </motion.div>
     </>
   );
 };

@@ -16,7 +16,8 @@ export const useNodeInteraction = ({
   pushSpecificHistory,
   snapshotRef,
   mouseDownData,
-  setFullscreenImage
+  setFullscreenImage,
+  view
 }) => {
   const nodeActions = {
     onMouseDown: (e, node) => {
@@ -84,7 +85,10 @@ export const useNodeInteraction = ({
       setMenu(null);
       const centerX = node.x + node.width / 2;
       const centerY = node.y + node.height / 2;
-      setDragInfo({ type: 'rotate', id: node.id, centerX, centerY, initialNode: { ...node } });
+      const worldMouseX = (e.clientX - view.x) / view.scale;
+      const worldMouseY = (e.clientY - view.y) / view.scale;
+      const startAngle = Math.atan2(worldMouseY - centerY, worldMouseX - centerX) * (180 / Math.PI);
+      setDragInfo({ type: 'rotate', id: node.id, centerX, centerY, initialNode: { ...node }, startAngle });
     },
     onRotateReset: (e, id) => { e.stopPropagation(); pushHistory(); setNodes(prev => prev.map(n => n.id === id ? { ...n, rotation: 0 } : n)); },
     onResizeMouseDown: (e, node) => {

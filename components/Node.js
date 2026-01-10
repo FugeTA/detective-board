@@ -2,6 +2,7 @@
 import React from 'react';
 import { getYouTubeId, getVimeoId, getSpotifyId } from '../utils/media';
 import { RotateCw } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 // ハイライト処理用コンポーネント
 const HighlightedContent = ({ text, keywords }) => {
@@ -50,11 +51,13 @@ const Node = ({
   const isMediaNode = ['youtube', 'vimeo', 'spotify'].includes(node.type);
 
   return (
-    <div 
+    <motion.div 
       className={`node ${node.type} ${isSelected ? 'selected' : ''}`} 
+      initial={{ scale: 0, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
       style={{ 
         left: node.x, top: node.y, width: node.width, height: node.height,
-        transform: `rotate(${node.rotation || 0}deg)`,
+        rotate: node.rotation || 0,
         background: node.color,
         color: node.textColor || '#000000',
         fontSize: node.fontSize || '16px',
@@ -231,7 +234,7 @@ const Node = ({
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

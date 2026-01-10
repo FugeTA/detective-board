@@ -18,11 +18,11 @@ export const useBoardInteraction = ({
   isErasing, setIsErasing,
   pushHistory,
   pushSpecificHistory,
-  eraseAt
+  eraseAt,
+  dragInfo, setDragInfo // ストアから受け取る
 }) => {
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-  const [dragInfo, setDragInfo] = useState(null);
   const [selectionBox, setSelectionBox] = useState(null);
   const [isSpacePressed, setIsSpacePressed] = useState(false);
   
@@ -145,12 +145,18 @@ export const useBoardInteraction = ({
     }
 
     if (dragInfo) {
-      if (!snapshotRef.current) return; // Add a guard clause
+      e.preventDefault(); // ドラッグ中のデフォルト動作（テキスト選択など）を防止
       const worldMouseX = (e.clientX - view.x) / view.scale;
       const worldMouseY = (e.clientY - view.y) / view.scale;
+      
       if (dragInfo.type === 'rotate') {
-        setNodes(prev => prev.map(n => n.id === dragInfo.id ? { ...n, rotation: (Math.atan2(worldMouseY - dragInfo.centerY, worldMouseX - dragInfo.centerX) * (180 / Math.PI)) + 45 } : n));
+        // 回転ロジックは snapshotRef に依存しないため、ガード句の外で実行
+        const currentAngle = Math.atan2(worldMouseY - dragInfo.centerY, worldMouseX - dragInfo.centerX) * (180 / Math.PI);
+        const delta = currentAngle - dragInfo.startAngle;
+        setNodes(prev => prev.map(n => n.id === dragInfo.id ? { ...n, rotation: (dragInfo.initialNode.rotation || 0) + delta } : n));
       } else {
+        if (!snapshotRef.current) return; // 移動・リサイズは snapshotRef が必要
+
         const dx = (e.clientX - dragInfo.startX) / view.scale;
         const dy = (e.clientY - dragInfo.startY) / view.scale;
         
@@ -291,8 +297,7 @@ export const useBoardInteraction = ({
   };
 
   return {
-    isPanning, dragInfo, selectionBox, isSpacePressed,
-    handleWheel, handleBoardMouseDown, handleMouseMove, handleMouseUp,
-    setDragInfo, snapshotRef, mouseDownData
+    isPanning, selectionBox, isSpacePressed,
+    handleWheel, handleBoardMouseDown, handleMouseMove, handleMouseUp, snapshotRef, mouseDownData
   };
 };

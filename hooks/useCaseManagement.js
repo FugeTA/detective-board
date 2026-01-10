@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { db } from '../db';
-import { DEFAULT_STATE } from './useBoardState';
+import { useStore } from '../store/useStore';
 import { generateId } from '../utils/id';
 
-export const useCaseManagement = ({ nodes, edges, keywords, drawings, view, loadData }) => {
+export const useCaseManagement = () => {
   const [currentCaseId, setCurrentCaseId] = useState(null);
   const [caseList, setCaseList] = useState([]);
   const [saveStatus, setSaveStatus] = useState(null);
   const clearStatusTimer = useRef(null);
+
+  const { nodes, edges, keywords, drawings, view, loadData } = useStore();
 
   // 初期化
   useEffect(() => {
@@ -15,7 +17,13 @@ export const useCaseManagement = ({ nodes, edges, keywords, drawings, view, load
       const allSaves = await db.saves.toArray();
       if (allSaves.length === 0) {
         const newId = generateId('case');
-        const newCase = { id: newId, name: 'Case #1', updatedAt: Date.now(), ...DEFAULT_STATE };
+        const newCase = { 
+          id: newId, 
+          name: 'Case #1', 
+          updatedAt: Date.now(), 
+          nodes: useStore.getState().nodes, // 初期値を取得
+          view: useStore.getState().view 
+        };
         await db.saves.add(newCase);
         setCaseList([{ id: newId, name: 'Case #1', updatedAt: Date.now() }]);
         setCurrentCaseId(newId);
@@ -46,11 +54,7 @@ export const useCaseManagement = ({ nodes, edges, keywords, drawings, view, load
         setSaveStatus('saved');
         setCaseList(prev => prev.map(c => c.id === currentCaseId ? { ...c, updatedAt: Date.now() } : c));
         
-        // 1秒後にフェードアウト開始、さらに1秒後に完全に消去
-        clearStatusTimer.current = setTimeout(() => {
-          setSaveStatus('saved-fading');
-          clearStatusTimer.current = setTimeout(() => setSaveStatus(null), 1000);
-        }, 1000);
+        clearStatusTimer.current = setTimeout(() => setSaveStatus(null), 2000);
       } catch (error) {
         console.error("Save failed:", error);
         setSaveStatus('error');
@@ -72,7 +76,13 @@ export const useCaseManagement = ({ nodes, edges, keywords, drawings, view, load
   const createCase = async () => {
     const newId = generateId('case');
     const newName = `Case #${caseList.length + 1}`;
-    const newCase = { id: newId, name: newName, updatedAt: Date.now(), ...DEFAULT_STATE };
+    const newCase = { 
+      id: newId, 
+      name: newName, 
+      updatedAt: Date.now(), 
+      nodes: [], edges: [], keywords: [], drawings: [], 
+      view: { x: 0, y: 0, scale: 1 } 
+    };
     await db.saves.add(newCase);
     setCaseList(prev => [{ id: newId, name: newName, updatedAt: Date.now() }, ...prev]);
     setCurrentCaseId(newId);

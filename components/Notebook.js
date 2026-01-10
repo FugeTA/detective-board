@@ -1,6 +1,7 @@
 // src/components/Notebook.js
 import React, { useState } from 'react';
 import { Book, Plus, X } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const Notebook = ({ 
   isOpen, 
@@ -22,13 +23,19 @@ const Notebook = ({
   return (
     <>
       {/* 開閉ボタン */}
-      <button className="notebook-toggle" onClick={onToggleOpen}>
+      <button 
+        className="notebook-toggle" 
+        onClick={onToggleOpen}
+      >
         <Book size={16} style={{marginRight: '4px'}} /> {isOpen ? 'Close' : 'Notebook'}
       </button>
 
       {/* サイドバー本体 */}
-      <div 
-        className={`notebook-sidebar ${isOpen ? 'open' : ''}`} 
+      <motion.div 
+        className="notebook-sidebar"
+        initial={{ x: '-100%' }}
+        animate={{ x: isOpen ? 0 : '-100%' }}
+        transition={{ type: 'tween', ease: 'easeInOut', duration: 0.1 }}
         onMouseDown={e => e.stopPropagation()} // ドラッグ等が裏に透けないように
       >
         <h3>Keywords List</h3>
@@ -68,7 +75,7 @@ const Notebook = ({
             </div>
           ))}
         </div>
-      </div>
+      </motion.div>
     </>
   );
 };

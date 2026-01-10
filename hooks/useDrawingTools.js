@@ -1,11 +1,16 @@
-import { useState } from 'react';
+import { useStore } from '../store/useStore';
 
-export const useDrawingTools = (pushHistory, setDrawings, view) => {
-  const [isDrawingMode, setIsDrawingMode] = useState(false);
-  const [currentDrawing, setCurrentDrawing] = useState(null);
-  const [penColor, setPenColor] = useState('#000000');
-  const [drawingTool, setDrawingTool] = useState('pen');
-  const [isErasing, setIsErasing] = useState(false);
+export const useDrawingTools = () => {
+  const {
+    isDrawingMode, setIsDrawingMode,
+    currentDrawing, setCurrentDrawing,
+    penColor, setPenColor,
+    drawingTool, setDrawingTool,
+    isErasing, setIsErasing,
+    pushHistory,
+    setDrawings,
+    view
+  } = useStore();
 
   const toggleDrawingMode = () => setIsDrawingMode(prev => !prev);
 

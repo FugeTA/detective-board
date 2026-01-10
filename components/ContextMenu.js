@@ -1,18 +1,21 @@
 // src/components/ContextMenu.js
 import React from 'react';
 import { FolderPlus, StickyNote, Image, MapPin, Layout, Edit2, Trash2, PenTool, Eraser } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const ContextMenu = ({ menu, onAction, selectedIds }) => {
-  if (!menu) return null;
-
   const colors = ['#fff9c4', '#ffcdd2', '#c8e6c9', '#bbdefb', '#e1bee7', '#ffffff'];
   const penColors = ['#000000', '#e74c3c', '#2196f3', '#2ecc71', '#f1c40f', '#9b59b6'];
   const textColors = ['#000000', '#ffffff', '#d32f2f', '#1976d2', '#388e3c', '#fbc02d'];
   const fontSizes = ['12px', '16px', '20px', '24px', '32px', '48px', '64px'];
 
   return (
-    <div 
+    <motion.div 
       className="context-menu" 
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={{ duration: 0.1 }}
       style={{ left: menu.left, top: menu.top, position: 'fixed' }} 
       onMouseDown={(e) => e.stopPropagation()} 
       onContextMenu={(e) => e.preventDefault()}
@@ -204,7 +207,7 @@ const ContextMenu = ({ menu, onAction, selectedIds }) => {
           <button onClick={() => onAction('exitDrawingMode')}>Exit Drawing Mode</button>
         </>
       )}
-    </div>
+    </motion.div>
   );
 };
 
