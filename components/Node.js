@@ -4,6 +4,7 @@ import { getYouTubeId, getVimeoId, getSpotifyId } from '../utils/media';
 import TextareaAutosize from 'react-textarea-autosize';
 import { RotateCw } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { format } from 'date-fns';
 
 // ハイライト処理用コンポーネント
 const HighlightedContent = ({ text, keywords }) => {
@@ -257,6 +258,18 @@ const Node = ({
             <HighlightedContent text={node.content} keywords={keywords} />
           )}
         </div>
+      )}
+
+      {/* 最終入力時間の表示 */}
+      {(node.type === 'note' || node.type === 'photo') && node.updatedAt && (
+        <div style={{
+          position: 'absolute',
+          bottom: '2px',
+          right: '18px',
+          fontSize: '0.65rem',
+          opacity: 0.6,
+          pointerEvents: 'none'
+        }}>{format(node.updatedAt, 'yyyy/MM/dd HH:mm')}</div>
       )}
     </motion.div>
   );

@@ -98,7 +98,7 @@ export const useNodeInteraction = ({
       setMenu(null);
       setDragInfo({ type: 'resize', id: node.id, startX: e.clientX, startY: e.clientY, initialNode: { ...node } });
     },
-    onContentChange: (id, val) => setNodes(nodes.map(n => n.id === id ? { ...n, content: val } : n)),
+    onContentChange: (id, val) => setNodes(nodes.map(n => n.id === id ? { ...n, content: val, updatedAt: Date.now() } : n)),
     onBlur: (id, newHeight) => {
       if (snapshotRef.current) { 
         const pastState = snapshotRef.current;
