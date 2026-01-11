@@ -20,7 +20,10 @@ struct ProxyParams {
 async fn main() {
     // 1. CORS設定（React:3000 からのアクセスを許可）
     let cors = CorsLayer::new()
-        .allow_origin("http://localhost:3000".parse::<HeaderValue>().unwrap())
+        .allow_origin([
+            "http://localhost:3000".parse::<HeaderValue>().unwrap(),
+            "https://detective-board-jet.vercel.app".parse::<HeaderValue>().unwrap(), // ★VercelのURLを追加
+        ])
         .allow_methods([Method::GET]);
 
     // 2. ルーティング設定
@@ -29,7 +32,12 @@ async fn main() {
         .layer(cors);
 
     // 3. サーバー起動（ポート8000）
-    let addr = SocketAddr::from(([0, 0, 0, 0], 8000));
+    let port = std::env::var("PORT")
+        .unwrap_or_else(|_| "8000".to_string()) // 環境変数がなければ8000
+        .parse::<u16>()
+        .expect("PORT must be a number");
+
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
     println!("listening on {}", addr);
     
     // Axum 0.7系の場合は serve を使用
