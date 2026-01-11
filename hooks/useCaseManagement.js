@@ -118,5 +118,46 @@ export const useCaseManagement = () => {
     setCaseList(prev => prev.map(c => c.id === id ? { ...c, name: newName } : c));
   };
 
-  return { currentCaseId, caseList, saveStatus, openCase, createCase, deleteCase, renameCase, saveCase };
+  const cleanupUnusedCache = useCallback(async () => {
+    if (!window.confirm("現在使用されていないPDFキャッシュを削除しますか？\n(全てのケースファイルを確認し、参照されていないキャッシュのみ削除します)")) return;
+    
+    try {
+      const allSaves = await db.saves.toArray();
+      const usedUrls = new Set();
+      
+      // 全てのセーブデータからPDFのURLを収集
+      allSaves.forEach(save => {
+        if (save.nodes) {
+          save.nodes.forEach(node => {
+            if (node.type === 'pdf' && node.pdfSrc) {
+              usedUrls.add(node.pdfSrc);
+            }
+          });
+        }
+      });
+
+      // 現在のボードの状態も考慮
+      nodes.forEach(node => {
+        if (node.type === 'pdf' && node.pdfSrc) {
+          usedUrls.add(node.pdfSrc);
+        }
+      });
+
+      // キャッシュから未使用のものを削除
+      const allCacheKeys = await db.pdfCache.toCollection().primaryKeys();
+      const keysToDelete = allCacheKeys.filter(key => !usedUrls.has(key));
+      
+      if (keysToDelete.length > 0) {
+        await db.pdfCache.bulkDelete(keysToDelete);
+        alert(`${keysToDelete.length} 件の未使用キャッシュを削除しました。`);
+      } else {
+        alert("削除対象のキャッシュはありませんでした。");
+      }
+    } catch (error) {
+      console.error("Cache cleanup failed:", error);
+      alert("キャッシュの削除中にエラーが発生しました。");
+    }
+  }, [nodes]);
+
+  return { currentCaseId, caseList, saveStatus, openCase, createCase, deleteCase, renameCase, saveCase, cleanupUnusedCache };
 };

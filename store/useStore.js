@@ -18,7 +18,7 @@ export const useStore = create((set, get) => ({
   selectedIds: new Set(),
   connectionDraft: null,
   menu: null,
-  fullscreenImage: null,
+  fullscreenContent: null,
   dragInfo: null,
   
   // --- Drawing Tools State ---
@@ -40,7 +40,7 @@ export const useStore = create((set, get) => ({
   setSelectedIds: (selectedIds) => set(state => ({ selectedIds: typeof selectedIds === 'function' ? selectedIds(state.selectedIds) : selectedIds })),
   setConnectionDraft: (connectionDraft) => set(state => ({ connectionDraft: typeof connectionDraft === 'function' ? connectionDraft(state.connectionDraft) : connectionDraft })),
   setMenu: (menu) => set(state => ({ menu: typeof menu === 'function' ? menu(state.menu) : menu })),
-  setFullscreenImage: (fullscreenImage) => set({ fullscreenImage }),
+  setFullscreenContent: (fullscreenContent) => set({ fullscreenContent }),
   setDragInfo: (dragInfo) => set(state => ({ dragInfo: typeof dragInfo === 'function' ? dragInfo(state.dragInfo) : dragInfo })),
 
   setIsDrawingMode: (isDrawingMode) => set(state => ({ isDrawingMode: typeof isDrawingMode === 'function' ? isDrawingMode(state.isDrawingMode) : isDrawingMode })),

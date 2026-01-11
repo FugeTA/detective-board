@@ -16,7 +16,7 @@ export const useNodeInteraction = ({
   pushSpecificHistory,
   snapshotRef,
   mouseDownData,
-  setFullscreenImage,
+  setFullscreenContent,
   view
 }) => {
   const nodeActions = {
@@ -31,6 +31,9 @@ export const useNodeInteraction = ({
       }
       if (!selectedIds.has(node.id)) setSelectedIds(new Set([node.id]));
       if (editingId === node.id) return;
+
+      // .nodrag クラスを持つ要素（PDF本文など）がクリックされた場合はドラッグを開始しない
+      if (e.target.closest('.nodrag')) return;
 
       snapshotRef.current = { nodes, edges, drawings };
       mouseDownData.current = { type: 'move', id: node.id, startX: e.clientX, startY: e.clientY, initialNode: { ...node } };
@@ -57,7 +60,11 @@ export const useNodeInteraction = ({
       if (node) {
         if (node.type === 'pin') return;
         if (node.type === 'photo' && node.imageSrc) {
-          setFullscreenImage(node.imageSrc);
+          setFullscreenContent({ type: 'photo', src: node.imageSrc });
+          return;
+        }
+        if (node.type === 'pdf' && node.pdfSrc) {
+          setFullscreenContent({ type: 'pdf', src: node.pdfSrc, reloadToken: node.reloadToken });
           return;
         }
       }

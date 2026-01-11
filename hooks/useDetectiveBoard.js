@@ -12,11 +12,11 @@ import { useRef } from 'react';
 export const useDetectiveBoard = () => {
   // ストアから状態と関数を取得
   const store = useStore();
-  const { nodes, edges, keywords, drawings, view, activeSidebar, editingId, selectedIds, connectionDraft, menu, fullscreenImage, isDrawingMode, currentDrawing, penColor, drawingTool, isErasing, dragInfo } = store;
+  const { nodes, edges, keywords, drawings, view, activeSidebar, editingId, selectedIds, connectionDraft, menu, fullscreenContent, isDrawingMode, currentDrawing, penColor, drawingTool, isErasing, dragInfo } = store;
   const fileInputRef = useRef(null);
 
   // 各種フック
-  const { currentCaseId, caseList, saveStatus, openCase: baseOpenCase, createCase, deleteCase, renameCase, saveCase } = useCaseManagement();
+  const { currentCaseId, caseList, saveStatus, openCase: baseOpenCase, createCase, deleteCase, renameCase, saveCase, cleanupUnusedCache } = useCaseManagement();
   const { toggleDrawingMode, clearDrawings, eraseAt } = useDrawingTools();
 
   // 派生ステート
@@ -74,7 +74,7 @@ export const useDetectiveBoard = () => {
     pushSpecificHistory: store.pushSpecificHistory,
     snapshotRef,
     mouseDownData,
-    setFullscreenImage: store.setFullscreenImage,
+    setFullscreenContent: store.setFullscreenContent,
     view
   });
 
@@ -124,7 +124,7 @@ export const useDetectiveBoard = () => {
   };
 
   const caseActions = {
-    openCase, createCase, deleteCase, renameCase,
+    openCase, createCase, deleteCase, renameCase, cleanupUnusedCache,
     toggleOpen: () => store.setActiveSidebar(prev => prev === 'case' ? null : 'case')
   };
 
@@ -149,7 +149,7 @@ export const useDetectiveBoard = () => {
     drawings: drawings.map(d => ({ ...d, selected: selectedIds.has(d.id) })), currentDrawing, isDrawingMode, penColor, drawingTool,
     isSpacePressed, isPanning,
     dragInfo,
-    fullscreenImage, setFullscreenImage: store.setFullscreenImage,
+    fullscreenContent, setFullscreenContent: store.setFullscreenContent,
     handleWheel, handleBoardMouseDown, handleBoardContextMenu, handleMouseMove, handleMouseUp, handleDragOver, handleDrop,
     notebookActions, nodeActions, edgeActions, menuAction, caseActions, handleImageUpload, drawingActions, // ★描画アクション
   };

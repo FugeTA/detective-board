@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import { useDetectiveBoard } from './hooks/useDetectiveBoard';
 import Node from './components/Node';
@@ -9,6 +9,125 @@ import CaseManager from './components/CaseManager';
 import DrawingLayer from './components/DrawingLayer'; // ★描画レイヤーを追加
 import { Pencil, Trash2, Save, Check, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/TextLayer.css';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import { db } from './db';
+
+// オプションをコンポーネントの外で定義して固定する（再レンダリング時のリロード防止）
+const pdfOptions = {
+  cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+  cMapPacked: true,
+};
+
+const FullscreenPdfViewer = ({ src, reloadToken, onClose }) => {
+  const [numPages, setNumPages] = useState(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pdfData, setPdfData] = useState(null);
+  const [scale, setScale] = useState(1.0);
+  const [initialScale, setInitialScale] = useState(null);
+  const containerRef = useRef(null);
+  const [isInitialScaleSet, setIsInitialScaleSet] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    let objectUrl = null;
+
+    const loadPdf = async () => {
+      if (!src) return;
+      setPdfData(null);
+
+      if (src.startsWith('data:')) {
+        if (isMounted) setPdfData(src);
+        return;
+      }
+
+      let blob = null;
+
+      if (!reloadToken) {
+        try {
+          const cached = await db.pdfCache.get(src);
+          if (cached) blob = cached.blob;
+        } catch (e) { console.error(e); }
+      }
+
+      if (!blob) {
+        const url = `http://localhost:8000/api/proxy-pdf?url=${encodeURIComponent(src)}${reloadToken ? '&refresh=true' : ''}`;
+        try {
+          const res = await fetch(url);
+          if (res.ok) {
+            blob = await res.blob();
+          }
+        } catch (e) { console.error(e); }
+      }
+
+      if (isMounted && blob) {
+        objectUrl = URL.createObjectURL(blob);
+        setPdfData(objectUrl);
+      }
+    };
+    loadPdf();
+    return () => { 
+      isMounted = false; 
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [src, reloadToken]);
+
+  // srcが変わったら初期化
+  useEffect(() => {
+    setIsInitialScaleSet(false);
+    setScale(1.0);
+    setInitialScale(null);
+  }, [src]);
+
+  // Ctrl + ホイールでズーム
+  const handleWheel = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const delta = e.deltaY * -0.002;
+    setScale(prev => Math.min(Math.max(0.1, prev + delta), 5.0));
+  };
+
+  // ページ読み込み完了時に枠に合わせてサイズ調整
+  const onPageLoadSuccess = (page) => {
+    if (!isInitialScaleSet && containerRef.current) {
+      const viewport = page.getViewport({ scale: 1 });
+      const containerHeight = containerRef.current.clientHeight;
+      const containerWidth = containerRef.current.clientWidth;
+      // パディング(40px)を考慮してフィットさせる
+      const newScale = Math.min((containerHeight - 40) / viewport.height, (containerWidth - 40) / viewport.width);
+      setScale(newScale);
+      setInitialScale(newScale);
+      setIsInitialScaleSet(true);
+    }
+  };
+
+  return (
+    <div style={{width: '90%', height: '90%', background: '#525659', display: 'flex', flexDirection: 'column', borderRadius: '4px', overflow: 'hidden', boxShadow: '0 0 20px rgba(0,0,0,0.5)'}} onClick={e => e.stopPropagation()}>
+      <div style={{background: '#333', padding: '10px', color: 'white', display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center'}}>
+         <button onClick={() => setPageNumber(p => Math.max(1, p - 1))} disabled={pageNumber<=1}>Prev</button>
+         <span>{pageNumber} / {numPages || '--'}</span>
+         <button onClick={() => setPageNumber(p => Math.min(numPages, p + 1))} disabled={pageNumber>=numPages}>Next</button>
+         <div style={{width: '20px'}}></div>
+         <button onClick={() => initialScale && setScale(initialScale)} disabled={!initialScale}>Reset Zoom</button>
+         <div style={{flex: 1}}></div>
+         <button onClick={onClose} style={{background: '#d63031', border: 'none', color: 'white', padding: '4px 12px', borderRadius: '2px', cursor: 'pointer'}}>Close</button>
+      </div>
+      <div 
+        ref={containerRef}
+        onWheel={handleWheel}
+        style={{flex: 1, overflow: 'auto', display: 'flex', justifyContent: 'center', padding: '20px'}}
+      >
+         {pdfData && (
+           <Document file={pdfData} onLoadSuccess={({ numPages }) => setNumPages(numPages)} options={pdfOptions} onLoadError={(e) => console.error("Fullscreen PDF Error:", e)}>
+              <Page pageNumber={pageNumber} scale={scale} renderTextLayer={true} renderAnnotationLayer={true} onLoadSuccess={onPageLoadSuccess} />
+           </Document>
+         )}
+         {!pdfData && <div style={{color: 'white', marginTop: '20px'}}>Loading PDF...</div>}
+      </div>
+    </div>
+  );
+};
 
 function App() {
   const {
@@ -17,7 +136,7 @@ function App() {
     drawings, currentDrawing, isDrawingMode, // ★描画state
     isSpacePressed, isPanning,
     dragInfo,
-    fullscreenImage, setFullscreenImage,
+    fullscreenContent, setFullscreenContent,
     handleWheel, handleBoardMouseDown, handleBoardContextMenu, handleMouseMove, handleMouseUp, handleDragOver, handleDrop,
     notebookActions, nodeActions, edgeActions, menuAction, handleImageUpload, caseActions, drawingActions, // ★描画アクション
   } = useDetectiveBoard();
@@ -83,6 +202,7 @@ function App() {
         onCreateCase={caseActions.createCase}
         onDeleteCase={caseActions.deleteCase}
         onRenameCase={caseActions.renameCase}
+        onCleanupCache={caseActions.cleanupUnusedCache}
       />
 
       {/* Notebook (サイドバー) */}
@@ -133,16 +253,22 @@ function App() {
         {menu && <ContextMenu menu={menu} onAction={menuAction} selectedIds={selectedIds} />}
       </AnimatePresence>
       
-      {fullscreenImage && (
+      {fullscreenContent && (
         <div 
           style={{
             position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', 
             backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 9999, 
-            display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'zoom-out'
+            display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'default'
           }}
-          onClick={() => setFullscreenImage(null)}
+          onClick={() => setFullscreenContent(null)}
+          onWheel={(e) => e.stopPropagation()}
         >
-          <img src={fullscreenImage} style={{maxWidth: '95%', maxHeight: '95%', objectFit: 'contain', boxShadow: '0 0 20px rgba(0,0,0,0.5)'}} alt="Fullscreen" />
+          {fullscreenContent.type === 'photo' && (
+            <img src={fullscreenContent.src} style={{maxWidth: '95%', maxHeight: '95%', objectFit: 'contain', boxShadow: '0 0 20px rgba(0,0,0,0.5)'}} alt="Fullscreen" />
+          )}
+          {fullscreenContent.type === 'pdf' && (
+            <FullscreenPdfViewer src={fullscreenContent.src} reloadToken={fullscreenContent.reloadToken} onClose={() => setFullscreenContent(null)} />
+          )}
         </div>
       )}
     </div>

@@ -15,6 +15,7 @@ body {
   overflow: hidden;
   background-color: #2c2c2c;
   /* 背景ドットはApp.jsのstyleで制御 */
+  user-select: none;
 }
 
 /* 描画モードの時はカーソルを変更 */
@@ -150,7 +151,7 @@ body {
 .case-icon { font-size: 1.5rem; margin-right: 10px; }
 .case-info { flex: 1; overflow: hidden; }
 .case-name { font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.case-name-input { width: 100%; background: #222; color: white; border: 1px solid #555; }
+.case-name-input { width: 100%; background: #222; color: white; border: 1px solid #555; user-select: text; }
 .case-date { font-size: 0.7rem; color: #888; }
 
 .case-delete { background: transparent; border: none; color: #666; font-size: 1.2rem; margin-left: 5px; }
@@ -237,6 +238,7 @@ body {
   padding: 8px;
   border-radius: 4px;
   outline: none;
+  user-select: text;
 }
 
 .keyword-add-btn {
@@ -428,6 +430,7 @@ textarea.note-input {
   box-sizing: border-box;
   padding: 5px;
   display: block;
+  user-select: text;
 }
 
 /* テキスト表示エリア内のハイライト */
@@ -506,4 +509,5 @@ textarea.frame-title {
   height: 25px !important;
   min-height: auto !important;
   resize: none !important;
+  user-select: text !important;
 }

@@ -157,6 +157,12 @@ export const useMenuInteraction = ({
       setMenu(prev => ({ ...prev, currentColor: payload }));
       return;
     }
+    else if (action === 'reloadPdf') {
+      // PDFのリロード用トークンを更新
+      const targets = selectedIds.has(menu.targetId) ? selectedIds : new Set([menu.targetId]);
+      setNodes(prev => prev.map(n => targets.has(n.id) && n.type === 'pdf' ? { ...n, reloadToken: Date.now() } : n));
+      // メニューを閉じる
+    }
     else if (action === 'changeTextColor') {
       pushHistory();
       const targets = selectedIds.has(menu.targetId) ? selectedIds : new Set([menu.targetId]);

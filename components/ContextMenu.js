@@ -1,6 +1,6 @@
 // src/components/ContextMenu.js
 import React from 'react';
-import { FolderPlus, StickyNote, Image, MapPin, Layout, Edit2, Trash2, PenTool, Eraser } from 'lucide-react';
+import { FolderPlus, StickyNote, Image, MapPin, Layout, Edit2, Trash2, PenTool, Eraser, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const ContextMenu = ({ menu, onAction, selectedIds }) => {
@@ -45,6 +45,9 @@ const ContextMenu = ({ menu, onAction, selectedIds }) => {
           {menu.nodeType !== 'drawing' && menu.nodeType !== 'pin' && <button onClick={() => onAction('edit')} style={{display:'flex', alignItems:'center', gap:'6px'}}><Edit2 size={14}/> Edit Text</button>}
           {menu.nodeType === 'photo' && (
              <button onClick={() => onAction('changePhoto')} style={{display:'flex', alignItems:'center', gap:'6px'}}><Image size={14}/> Change Image</button>
+          )}
+          {menu.nodeType === 'pdf' && (
+             <button onClick={() => onAction('reloadPdf')} style={{display:'flex', alignItems:'center', gap:'6px'}}><RefreshCw size={14}/> Reload PDF</button>
           )}
           <div className="menu-divider"></div>
           {menu.nodeType !== 'drawing' && menu.nodeType !== 'pin' && <div style={{padding:'4px 12px', color:'#888', fontSize:'0.75rem'}}>Background</div>}

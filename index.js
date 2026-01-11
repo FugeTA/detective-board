@@ -3,6 +3,10 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { pdfjs } from 'react-pdf';
+
+// PDF Workerの設定 (アプリケーション全体で一度だけ設定)
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

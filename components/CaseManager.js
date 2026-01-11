@@ -1,6 +1,6 @@
 // src/components/CaseManager.js
 import React, { useState } from 'react';
-import { Folder, Plus, X } from 'lucide-react';
+import { Folder, Plus, X, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const CaseManager = ({ 
@@ -11,7 +11,8 @@ const CaseManager = ({
   onOpenCase, 
   onCreateCase, 
   onDeleteCase,
-  onRenameCase
+  onRenameCase,
+  onCleanupCache
 }) => {
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState("");
@@ -43,6 +44,10 @@ const CaseManager = ({
         
         <button className="create-case-btn" onClick={onCreateCase}>
           <Plus size={14} style={{marginRight: '4px'}} /> New Case
+        </button>
+
+        <button className="create-case-btn" onClick={onCleanupCache} style={{background: '#444', border: '1px solid #666', marginBottom: '20px', fontSize: '0.8rem'}}>
+          <Trash2 size={14} style={{marginRight: '4px'}} /> Clean Unused Cache
         </button>
 
         <div className="case-list">

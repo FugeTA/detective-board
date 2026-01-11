@@ -1,10 +1,20 @@
 // src/components/Node.js
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { getYouTubeId, getVimeoId, getSpotifyId } from '../utils/media';
 import TextareaAutosize from 'react-textarea-autosize';
-import { RotateCw } from 'lucide-react';
+import { RotateCw, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/TextLayer.css';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import { db } from '../db';
+
+// 日本語フォント（CMaps）対応オプション
+const pdfOptions = {
+  cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+  cMapPacked: true,
+};
 
 // ハイライト処理用コンポーネント
 const HighlightedContent = ({ text, keywords }) => {
@@ -42,6 +52,78 @@ const Node = ({
   onBlur 
 }) => {
   const nodeRef = useRef(null);
+  const [numPages, setNumPages] = useState(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pdfData, setPdfData] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    let objectUrl = null;
+
+    const loadPdf = async () => {
+      if (!node.pdfSrc) return;
+      setPdfData(null);
+      setLoadError(null);
+
+      // 1. Data URIの場合はそのまま使用
+      if (node.pdfSrc.startsWith('data:')) {
+        setPdfData(node.pdfSrc);
+        return;
+      }
+
+      let blob = null;
+
+      // 2. IndexedDBキャッシュの確認 (リロード要求がない場合)
+      if (!node.reloadToken) {
+        try {
+          const cached = await db.pdfCache.get(node.pdfSrc);
+          if (cached) blob = cached.blob;
+        } catch (e) {
+          console.error("Cache read error:", e);
+        }
+      }
+
+      // 3. ネットワークからの取得 (Rustバックエンドのみ)
+      if (!blob) {
+        const url = `http://localhost:8000/api/proxy-pdf?url=${encodeURIComponent(node.pdfSrc)}${node.reloadToken ? '&refresh=true' : ''}`;
+        try {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`Status ${res.status}`);
+          blob = await res.blob();
+          
+          // 取得成功時にIndexedDBへ保存
+          if (isMounted) {
+            try {
+              await db.pdfCache.put({ url: node.pdfSrc, blob: blob, updatedAt: Date.now() });
+            } catch (e) { console.warn("Cache write error:", e); }
+          }
+        } catch (e) {
+          console.log(`Fetch failed: ${url}`, e);
+        }
+      }
+
+      if (isMounted) {
+        if (blob) {
+          objectUrl = URL.createObjectURL(blob);
+          setPdfData(objectUrl);
+        } else {
+          setLoadError("Failed to load PDF");
+        }
+      }
+    };
+
+    loadPdf();
+    return () => { 
+      isMounted = false; 
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [node.pdfSrc, node.reloadToken]);
+
+  const onDocumentLoadSuccess = ({ numPages }) => {
+    setNumPages(numPages);
+  };
+
   // ドメイン取得（エラーハンドリング付き）
   const getHostname = (url) => {
     try {
@@ -51,7 +133,7 @@ const Node = ({
     }
   };
 
-  const isMediaNode = ['youtube', 'vimeo', 'spotify'].includes(node.type);
+  const isMediaNode = ['youtube', 'vimeo', 'spotify', 'pdf'].includes(node.type);
 
   return (
     <motion.div 
@@ -62,8 +144,8 @@ const Node = ({
       exit={{ scale: 0, opacity: 0 }}
       style={{ 
         left: node.x, top: node.y, width: node.width, 
-        height: (node.type === 'note' || node.type === 'photo' || (isEditing && !isMediaNode)) ? 'auto' : node.height,
-        minHeight: node.type === 'frame' ? 100 : ((node.type === 'note' || node.type === 'photo') ? node.height : (isEditing ? 50 : node.height)),
+        height: (node.type === 'note' || node.type === 'photo' || node.type === 'pdf' || (isEditing && !isMediaNode)) ? 'auto' : node.height,
+        minHeight: node.type === 'frame' ? 100 : ((node.type === 'note' || node.type === 'photo' || node.type === 'pdf') ? node.height : (isEditing ? 50 : node.height)),
         display: 'flex',
         flexDirection: 'column',
         rotate: node.rotation || 0,
@@ -125,6 +207,53 @@ const Node = ({
         </div>
       )}
       
+      {node.type === 'pdf' && (
+        <div style={{width:'100%', display:'flex', flexDirection:'column', background:'#525659', borderRadius:'2px', overflow:'hidden'}}>
+          <div style={{
+            padding:'8px 12px', background:'#333', color:'#eee', display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:'0.9rem',
+            cursor: isSpacePressed ? 'grab' : 'move'
+          }}>
+             <span style={{fontWeight:'bold'}}>PDF</span>
+             <div style={{display:'flex', gap:'8px', alignItems:'center'}} onMouseDown={e => e.stopPropagation()}>
+               <button disabled={pageNumber<=1} onClick={()=>setPageNumber(p=>p-1)} style={{cursor:'pointer', padding:'4px 8px', fontSize:'0.9rem'}}>&lt;</button>
+               <span>{pageNumber} / {numPages||'--'}</span>
+               <button disabled={pageNumber>=numPages} onClick={()=>setPageNumber(p=>p+1)} style={{cursor:'pointer', padding:'4px 8px', fontSize:'0.9rem'}}>&gt;</button>
+               <a href={node.pdfSrc} target="_blank" rel="noopener noreferrer" style={{color:'#eee', marginLeft:'8px', display:'flex'}} title="Open in new tab" onMouseDown={e => e.stopPropagation()}>
+                 <ExternalLink size={16} />
+               </a>
+             </div>
+          </div>
+          <div className="nodrag" style={{width:'100%', minHeight:'100px', background:'#e9ecef', display:'flex', justifyContent:'center', padding:'10px 0', userSelect:'text', cursor:'auto', lineHeight: '1.0'}}>
+             <Document 
+               file={pdfData} 
+               options={pdfOptions}
+               onLoadSuccess={onDocumentLoadSuccess} 
+               loading={<div style={{padding:'10px', fontSize:'0.8rem'}}>Loading...</div>} 
+               noData={
+                 loadError ? (
+                   <div style={{padding:'10px', color:'red', fontSize:'0.8rem', textAlign:'center'}}>
+                     <div>{loadError}</div>
+                     <a href={node.pdfSrc} target="_blank" rel="noopener noreferrer" style={{color:'#2196f3', marginTop:'4px', display:'inline-block', fontSize:'0.75rem'}} onMouseDown={e => e.stopPropagation()}>Open External</a>
+                   </div>
+                 ) : (
+                   <div style={{padding:'10px', fontSize:'0.8rem'}}>Loading...</div>
+                 )
+               }
+               error={
+                 <div style={{padding:'10px', color:'red', fontSize:'0.8rem', textAlign:'center'}}>
+                   <div>{loadError || 'Waiting for data...'}</div>
+                   <a href={node.pdfSrc} target="_blank" rel="noopener noreferrer" style={{color:'#2196f3', marginTop:'4px', display:'inline-block', fontSize:'0.75rem'}} onMouseDown={e => e.stopPropagation()}>Open External</a>
+                 </div>
+               }
+             >
+                <div style={{boxShadow: '0 2px 8px rgba(0,0,0,0.15)'}}>
+                  <Page pageNumber={pageNumber} width={node.width - 40} renderTextLayer={true} renderAnnotationLayer={true} />
+                </div>
+             </Document>
+          </div>
+        </div>
+      )}
+
       {node.type === 'youtube' && (
         <div style={{width:'100%', height:'100%', display:'flex', flexDirection:'column', overflow:'hidden'}}>
           {/* ドラッグ用ハンドル */}
@@ -201,7 +330,7 @@ const Node = ({
           autoFocus 
           onBlur={() => {
             // 編集終了時に現在の高さを保存する
-            if (nodeRef.current && node.type !== 'note' && node.type !== 'photo') {
+            if (nodeRef.current && node.type !== 'note' && node.type !== 'photo' && node.type !== 'pdf') {
               onBlur(node.id, nodeRef.current.offsetHeight);
             } else {
               onBlur(node.id);
