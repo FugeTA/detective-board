@@ -56,14 +56,16 @@ useEffect(() => {
         const apiBase = process.env.REACT_APP_API_URL || "http://localhost:8000";
         const cleanBase = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase;
         
-        const url = `${cleanBase}/api/proxy-pdf?url=${encodeURIComponent(src)}${reloadToken ? '&refresh=true' : ''}`;
-        
-        try {
-          const res = await fetch(url);
-          if (res.ok) {
-            blob = await res.blob();
-          }
-        } catch (e) { console.error(e); }
+        // asset:// の場合はプロキシを叩かない（IDBにしかないため）
+        if (!src.startsWith('asset://')) {
+          const url = `${cleanBase}/api/proxy-pdf?url=${encodeURIComponent(src)}${reloadToken ? '&refresh=true' : ''}`;
+          try {
+            const res = await fetch(url);
+            if (res.ok) {
+              blob = await res.blob();
+            }
+          } catch (e) { console.error(e); }
+        }
       }
 
       if (isMounted && blob) {
@@ -208,6 +210,8 @@ function App() {
         onDeleteCase={caseActions.deleteCase}
         onRenameCase={caseActions.renameCase}
         onCleanupCache={caseActions.cleanupUnusedCache}
+        onShareCase={caseActions.shareCase}
+        onImportCase={caseActions.importCase}
       />
 
       {/* Notebook (サイドバー) */}

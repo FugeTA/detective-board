@@ -1,6 +1,6 @@
 // src/components/CaseManager.js
 import React, { useState } from 'react';
-import { Folder, Plus, X, Trash2 } from 'lucide-react';
+import { Folder, Plus, X, Trash2, Share2, Download } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const CaseManager = ({ 
@@ -12,10 +12,41 @@ const CaseManager = ({
   onCreateCase, 
   onDeleteCase,
   onRenameCase,
-  onCleanupCache
+  onCleanupCache,
+  onShareCase,
+  onImportCase
 }) => {
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState("");
+  const [importCode, setImportCode] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+
+  const handleShare = async () => {
+    try {
+      const result = await onShareCase();
+      if (result) {
+        alert(`Share Code: ${result.share_code}\nExpires: ${new Date(result.expires_at).toLocaleString()}`);
+      }
+    } catch (e) {
+      alert("Failed to share case.");
+    }
+  };
+
+  const handleImport = async () => {
+    if (!importCode.trim()) return;
+    setIsImporting(true);
+    try {
+      await onImportCase(importCode.trim(), (current, total) => {
+        console.log(`Importing: ${current}/${total}`);
+      });
+      setImportCode("");
+      alert("Case imported successfully.");
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   const startEdit = (c) => {
     setEditingId(c.id);
@@ -49,6 +80,25 @@ const CaseManager = ({
         <button className="create-case-btn" onClick={onCleanupCache} style={{background: '#444', border: '1px solid #666', marginBottom: '20px', fontSize: '0.8rem'}}>
           <Trash2 size={14} style={{marginRight: '4px'}} /> Clean Unused Cache
         </button>
+
+        <div style={{ borderTop: '1px solid #444', paddingTop: '15px', marginBottom: '15px' }}>
+          <button className="create-case-btn" onClick={handleShare} style={{ background: '#2d3436' }}>
+            <Share2 size={14} style={{ marginRight: '4px' }} /> Share Current Case
+          </button>
+          
+          <div style={{ display: 'flex', gap: '5px' }}>
+            <input 
+              className="case-name-input" 
+              placeholder="Share Code" 
+              value={importCode}
+              onChange={(e) => setImportCode(e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <button className="create-case-btn" onClick={handleImport} disabled={isImporting} style={{ margin: 0, padding: '5px 10px', width: 'auto' }}>
+              <Download size={14} />
+            </button>
+          </div>
+        </div>
 
         <div className="case-list">
           {cases.map(c => (

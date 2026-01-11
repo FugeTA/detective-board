@@ -1,74 +1,72 @@
+mod handlers;
+mod models;
+mod supabase;
+mod utils;
+
 use axum::{
-    extract::Query,
-    http::{HeaderValue, Method, StatusCode},
-    response::{IntoResponse, Response},
-    routing::get,
+    extract::DefaultBodyLimit,
+    http::{HeaderValue, Method},
+    routing::{get, post},
     Router,
 };
 use reqwest::Client;
-use serde::Deserialize;
 use std::net::SocketAddr;
+use std::sync::Arc;
 use tower_http::cors::CorsLayer;
+use dotenvy::dotenv;
+use sqlx::postgres::PgPoolOptions;
 
-// クエリパラメータの受け皿（?url=... の部分）
-#[derive(Deserialize)]
-struct ProxyParams {
-    url: String,
-}
+use crate::models::AppState;
+use crate::handlers::{
+    proxy::proxy_pdf_handler,
+    share::share_case_handler,
+    import::import_case_handler,
+};
 
 #[tokio::main]
 async fn main() {
-    // 1. CORS設定（React:3000 からのアクセスを許可）
+    dotenv().ok();
+
+    let supabase_url = std::env::var("SUPABASE_URL").expect("SUPABASE_URL must be set");
+    let supabase_key = std::env::var("SUPABASE_KEY").expect("SUPABASE_KEY must be set");
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await
+        .expect("Failed to connect to DB");
+
+    let state = Arc::new(AppState {
+        supabase_url,
+        supabase_key,
+        client: Client::new(),
+        db: pool,
+    });
+
     let cors = CorsLayer::new()
         .allow_origin([
             "http://localhost:3000".parse::<HeaderValue>().unwrap(),
-            "https://detective-board-jet.vercel.app".parse::<HeaderValue>().unwrap(), // ★VercelのURLを追加
+            "https://detective-board-jet.vercel.app".parse::<HeaderValue>().unwrap(),
         ])
-        .allow_methods([Method::GET]);
+        .allow_methods([Method::GET, Method::POST]);
 
-    // 2. ルーティング設定
     let app = Router::new()
         .route("/api/proxy-pdf", get(proxy_pdf_handler))
-        .layer(cors);
+        .route("/api/share", post(share_case_handler))
+        .route("/api/import/:code", get(import_case_handler))
+        .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
+        .layer(cors)
+        .with_state(state);
 
-    // 3. サーバー起動（ポート8000）
     let port = std::env::var("PORT")
-        .unwrap_or_else(|_| "8000".to_string()) // 環境変数がなければ8000
+        .unwrap_or_else(|_| "8000".to_string())
         .parse::<u16>()
         .expect("PORT must be a number");
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     println!("listening on {}", addr);
     
-    // Axum 0.7系の場合は serve を使用
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
-}
-
-// ハンドラ関数：PDFを取りに行って返す
-async fn proxy_pdf_handler(Query(params): Query<ProxyParams>) -> impl IntoResponse {
-    let client = Client::new();
-
-    // Pythonの requests.get(url) に相当
-    match client.get(&params.url).send().await {
-        Ok(resp) => {
-            if !resp.status().is_success() {
-                return (StatusCode::BAD_REQUEST, "Failed to fetch PDF").into_response();
-            }
-
-            // PDFの生データを取得
-            let bytes = match resp.bytes().await {
-                Ok(b) => b,
-                Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to read bytes").into_response(),
-            };
-
-            // レスポンスを作成 (Content-Type: application/pdf を付与)
-            Response::builder()
-                .header("Content-Type", "application/pdf")
-                .body(axum::body::Body::from(bytes))
-                .unwrap()
-                .into_response()
-        }
-        Err(_) => (StatusCode::BAD_REQUEST, "Invalid URL").into_response(),
-    }
 }

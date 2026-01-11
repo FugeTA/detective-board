@@ -16,7 +16,7 @@ export const useDetectiveBoard = () => {
   const fileInputRef = useRef(null);
 
   // 各種フック
-  const { currentCaseId, caseList, saveStatus, openCase: baseOpenCase, createCase, deleteCase, renameCase, saveCase, cleanupUnusedCache } = useCaseManagement();
+  const { currentCaseId, caseList, saveStatus, openCase: baseOpenCase, createCase, deleteCase, renameCase, saveCase, cleanupUnusedCache, shareCase, importCase } = useCaseManagement();
   const { toggleDrawingMode, clearDrawings, eraseAt } = useDrawingTools();
 
   // 派生ステート
@@ -124,7 +124,7 @@ export const useDetectiveBoard = () => {
   };
 
   const caseActions = {
-    openCase, createCase, deleteCase, renameCase, cleanupUnusedCache,
+    openCase, createCase, deleteCase, renameCase, cleanupUnusedCache, shareCase, importCase,
     toggleOpen: () => store.setActiveSidebar(prev => prev === 'case' ? null : 'case')
   };
 

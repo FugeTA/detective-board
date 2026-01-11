@@ -56,6 +56,7 @@ const Node = ({
   const [pageNumber, setPageNumber] = useState(1);
   const [pdfData, setPdfData] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  const [resolvedImageSrc, setResolvedImageSrc] = useState(null);
 
  useEffect(() => {
     let isMounted = true;
@@ -84,8 +85,8 @@ const Node = ({
         }
       }
 
-      // 3. ネットワークからの取得
-      if (!blob) {
+      // 3. ネットワークからの取得 (外部URLかつキャッシュがない場合のみ)
+      if (!blob && !node.pdfSrc.startsWith('asset://')) {
         // ★ 環境変数を取得（Vercel用）。末尾のスラッシュを処理
         const apiBase = process.env.REACT_APP_API_URL || "http://localhost:8000";
         const cleanBase = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase;
@@ -125,6 +126,41 @@ const Node = ({
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [node.pdfSrc, node.reloadToken]);
+
+  // 画像アセットの解決 (asset:// 対応)
+  useEffect(() => {
+    if (node.type !== 'photo' || !node.imageSrc) {
+      setResolvedImageSrc(null);
+      return;
+    }
+    
+    // data: や blob: はそのまま表示可能
+    if (node.imageSrc.startsWith('data:') || node.imageSrc.startsWith('blob:')) {
+      setResolvedImageSrc(node.imageSrc);
+      return;
+    }
+
+    let isMounted = true;
+    let objectUrl = null;
+
+    const loadAsset = async () => {
+      try {
+        const cached = await db.pdfCache.get(node.imageSrc);
+        if (cached && isMounted) {
+          objectUrl = URL.createObjectURL(cached.blob);
+          setResolvedImageSrc(objectUrl);
+        }
+      } catch (e) {
+        console.error("Failed to load image asset:", e);
+      }
+    };
+    loadAsset();
+    return () => {
+      isMounted = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [node.imageSrc, node.type]);
+
   const onDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
   };
@@ -205,7 +241,7 @@ const Node = ({
             backgroundSize: 'contain',
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
-            backgroundImage: node.imageSrc ? `url(${node.imageSrc})` : undefined 
+            backgroundImage: resolvedImageSrc ? `url(${resolvedImageSrc})` : undefined 
           }}
         >
           {!node.imageSrc && "No Image"}
