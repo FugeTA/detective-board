@@ -25,7 +25,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "rust": "cd detective-backend && cargo watch -x run",
+    "rust": "cd ../backend && cargo watch -x run",
     "dev": "concurrently \"npm start\" \"npm run rust\"",
     "test": "react-scripts test",
     "eject": "react-scripts eject"

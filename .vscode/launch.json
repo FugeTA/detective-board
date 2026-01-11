@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Launch Frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
+      "cwd": "${workspaceFolder}/frontend"
+    },
+    {
+      "type": "lldb", // Rustデバッガ（CodeLLDB拡張機能が必要）
+      "request": "launch",
+      "name": "Launch Backend",
+      "cargo": {
+        "args": ["build"], // まずビルドさせる
+        "cwd": "${workspaceFolder}/backend"
+      },
+      // 実行ファイル（バイナリ）の場所を直接指定する
+      "program": "${workspaceFolder}/backend/target/debug/detective-backend.exe",
+      "cwd": "${workspaceFolder}/backend", 
+      "console": "integratedTerminal"
+          }
+  ],
+  "compounds": [
+    {
+      "name": "Launch Both",
+      "configurations": ["Launch Frontend", "Launch Backend"]
+    }
+  ]
+}
