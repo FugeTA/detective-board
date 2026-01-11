@@ -61,8 +61,8 @@ const Node = ({
       exit={{ scale: 0, opacity: 0 }}
       style={{ 
         left: node.x, top: node.y, width: node.width, 
-        height: isEditing ? 'auto' : node.height,
-        minHeight: node.type === 'frame' ? 100 : (node.type === 'note' ? 50 : (isEditing ? 50 : node.height)),
+        height: (node.type === 'note' || node.type === 'photo' || (isEditing && !isMediaNode)) ? 'auto' : node.height,
+        minHeight: node.type === 'frame' ? 100 : ((node.type === 'note' || node.type === 'photo') ? node.height : (isEditing ? 50 : node.height)),
         display: 'flex',
         flexDirection: 'column',
         rotate: node.rotation || 0,
@@ -111,9 +111,9 @@ const Node = ({
           className={`photo-inner ${node.imageSrc ? 'has-image' : ''}`} 
           style={{ 
             width: '100%',
-            flex: isEditing ? 'none' : '1 1 auto',
-            height: isEditing ? (node.aspectRatio ? (node.width / node.aspectRatio) : (node.height * 0.9)) : 'auto',
-            minHeight: 0,
+            flex: '0 0 auto',
+            height: 'auto',
+            minHeight: node.height,
             backgroundSize: 'contain',
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
@@ -200,7 +200,7 @@ const Node = ({
           autoFocus 
           onBlur={() => {
             // 編集終了時に現在の高さを保存する
-            if (nodeRef.current) {
+            if (nodeRef.current && node.type !== 'note' && node.type !== 'photo') {
               onBlur(node.id, nodeRef.current.offsetHeight);
             } else {
               onBlur(node.id);
@@ -215,13 +215,17 @@ const Node = ({
             overflow: 'hidden',
             fontSize: node.fontSize || '16px',
             color: node.textColor || '#000000',
-            resize: 'none' 
+            resize: 'none',
+            wordBreak: 'break-word',
+            overflowWrap: 'break-word'
           }} 
         />
       ) : !isMediaNode && node.type !== 'pin' && (
         <div style={{
           flex: (node.type === 'note' || node.type === 'link') ? 1 : 'none', 
           whiteSpace: 'pre-wrap', 
+          wordBreak: 'break-word',
+          overflowWrap: 'break-word',
           width:'100%', 
           height: 'auto', 
           minHeight: '20px', 
