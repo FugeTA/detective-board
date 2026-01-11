@@ -29,7 +29,7 @@ const FullscreenPdfViewer = ({ src, reloadToken, onClose }) => {
   const containerRef = useRef(null);
   const [isInitialScaleSet, setIsInitialScaleSet] = useState(false);
 
-  useEffect(() => {
+useEffect(() => {
     let isMounted = true;
     let objectUrl = null;
 
@@ -52,7 +52,12 @@ const FullscreenPdfViewer = ({ src, reloadToken, onClose }) => {
       }
 
       if (!blob) {
-        const url = `http://localhost:8000/api/proxy-pdf?url=${encodeURIComponent(src)}${reloadToken ? '&refresh=true' : ''}`;
+        // ★ 修正ポイント: 環境変数からベースURLを取得し、末尾の / を除いて結合
+        const apiBase = process.env.REACT_APP_API_URL || "http://localhost:8000";
+        const cleanBase = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase;
+        
+        const url = `${cleanBase}/api/proxy-pdf?url=${encodeURIComponent(src)}${reloadToken ? '&refresh=true' : ''}`;
+        
         try {
           const res = await fetch(url);
           if (res.ok) {

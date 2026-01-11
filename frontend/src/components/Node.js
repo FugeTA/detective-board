@@ -57,7 +57,7 @@ const Node = ({
   const [pdfData, setPdfData] = useState(null);
   const [loadError, setLoadError] = useState(null);
 
-  useEffect(() => {
+ useEffect(() => {
     let isMounted = true;
     let objectUrl = null;
 
@@ -74,7 +74,7 @@ const Node = ({
 
       let blob = null;
 
-      // 2. IndexedDBキャッシュの確認 (リロード要求がない場合)
+      // 2. IndexedDBキャッシュの確認
       if (!node.reloadToken) {
         try {
           const cached = await db.pdfCache.get(node.pdfSrc);
@@ -84,9 +84,14 @@ const Node = ({
         }
       }
 
-      // 3. ネットワークからの取得 (Rustバックエンドのみ)
+      // 3. ネットワークからの取得
       if (!blob) {
-        const url = `http://localhost:8000/api/proxy-pdf?url=${encodeURIComponent(node.pdfSrc)}${node.reloadToken ? '&refresh=true' : ''}`;
+        // ★ 環境変数を取得（Vercel用）。末尾のスラッシュを処理
+        const apiBase = process.env.REACT_APP_API_URL || "http://localhost:8000";
+        const cleanBase = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase;
+        
+        const url = `${cleanBase}/api/proxy-pdf?url=${encodeURIComponent(node.pdfSrc)}${node.reloadToken ? '&refresh=true' : ''}`;
+        
         try {
           const res = await fetch(url);
           if (!res.ok) throw new Error(`Status ${res.status}`);
@@ -99,7 +104,8 @@ const Node = ({
             } catch (e) { console.warn("Cache write error:", e); }
           }
         } catch (e) {
-          console.log(`Fetch failed: ${url}`, e);
+          // ★ url変数が動的になったので、エラー時にどこに送ろうとしたか分かりやすくなります
+          console.error(`Fetch failed to endpoint: ${url}`, e);
         }
       }
 
@@ -119,7 +125,6 @@ const Node = ({
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [node.pdfSrc, node.reloadToken]);
-
   const onDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
   };
