@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { db } from '../db';
 import { useStore } from '../store/useStore';
 import { generateId } from '../utils/id';
@@ -38,6 +38,23 @@ export const useCaseManagement = () => {
     init();
   }, [loadData]);
 
+  // 手動保存関数
+  const saveCase = useCallback(async () => {
+    if (!currentCaseId) return;
+    setSaveStatus('saving');
+    try {
+      await db.saves.update(currentCaseId, { nodes, edges, keywords, view, drawings, updatedAt: Date.now() });
+      setSaveStatus('saved');
+      setCaseList(prev => prev.map(c => c.id === currentCaseId ? { ...c, updatedAt: Date.now() } : c));
+      
+      if (clearStatusTimer.current) clearTimeout(clearStatusTimer.current);
+      clearStatusTimer.current = setTimeout(() => setSaveStatus(null), 2000);
+    } catch (error) {
+      console.error("Save failed:", error);
+      setSaveStatus('error');
+    }
+  }, [currentCaseId, nodes, edges, keywords, view, drawings]);
+
   // 自動保存
   useEffect(() => {
     if (!currentCaseId) return;
@@ -48,20 +65,10 @@ export const useCaseManagement = () => {
     }
 
     const handler = setTimeout(async () => {
-      setSaveStatus('saving');
-      try {
-        await db.saves.update(currentCaseId, { nodes, edges, keywords, view, drawings, updatedAt: Date.now() });
-        setSaveStatus('saved');
-        setCaseList(prev => prev.map(c => c.id === currentCaseId ? { ...c, updatedAt: Date.now() } : c));
-        
-        clearStatusTimer.current = setTimeout(() => setSaveStatus(null), 2000);
-      } catch (error) {
-        console.error("Save failed:", error);
-        setSaveStatus('error');
-      }
+      saveCase();
     }, 1000);
     return () => clearTimeout(handler);
-  }, [nodes, edges, keywords, view, drawings, currentCaseId]);
+  }, [saveCase, currentCaseId]);
 
   const openCase = async (id) => {
     if (id === currentCaseId) return;
@@ -111,5 +118,5 @@ export const useCaseManagement = () => {
     setCaseList(prev => prev.map(c => c.id === id ? { ...c, name: newName } : c));
   };
 
-  return { currentCaseId, caseList, saveStatus, openCase, createCase, deleteCase, renameCase };
+  return { currentCaseId, caseList, saveStatus, openCase, createCase, deleteCase, renameCase, saveCase };
 };

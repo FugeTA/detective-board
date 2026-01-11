@@ -16,7 +16,7 @@ export const useDetectiveBoard = () => {
   const fileInputRef = useRef(null);
 
   // 各種フック
-  const { currentCaseId, caseList, saveStatus, openCase: baseOpenCase, createCase, deleteCase, renameCase } = useCaseManagement();
+  const { currentCaseId, caseList, saveStatus, openCase: baseOpenCase, createCase, deleteCase, renameCase, saveCase } = useCaseManagement();
   const { toggleDrawingMode, clearDrawings, eraseAt } = useDrawingTools();
 
   // 派生ステート
@@ -107,12 +107,14 @@ export const useDetectiveBoard = () => {
 
   // キーボードショートカットのフック
   useKeyboardShortcuts({
+    nodes, edges, drawings,
     editingId,
     setIsDrawingMode: store.setIsDrawingMode,
     selectedIds, setSelectedIds: store.setSelectedIds,
     pushHistory: store.pushHistory,
     setNodes: store.setNodes, setEdges: store.setEdges, setDrawings: store.setDrawings,
-    undo: store.undo
+    undo: store.undo,
+    saveCase
   });
 
   // --- Case Actions ---
