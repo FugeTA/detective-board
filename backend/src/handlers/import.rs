@@ -10,6 +10,7 @@ use serde_json::Value;
 use sqlx::Row;
 
 use crate::models::{AppState, ImportResponse, AssetResponse};
+use crate::utils::normalize_base_url;
 
 pub async fn import_case_handler(
     Path(code): Path<String>,
@@ -56,11 +57,7 @@ pub async fn import_case_handler(
             let storage_path: String = row.get("storage_path");
             
             // Return absolute URL using backend_url from environment
-            let backend_base = if state.backend_url.ends_with('/') {
-                state.backend_url.trim_end_matches('/').to_string()
-            } else {
-                state.backend_url.clone()
-            };
+            let backend_base = normalize_base_url(&state.backend_url);
             let proxy_url = format!("{}/api/storage/{}", backend_base, storage_path);
             
             asset_responses.push(AssetResponse {

@@ -13,7 +13,7 @@ pub async fn upload_to_supabase(
         .header("Authorization", format!("Bearer {}", state.supabase_key))
         .header("apikey", &state.supabase_key)
         .header("Content-Type", mime_type)
-        .body(data.clone())
+        .body(data)
         .send()
         .await
         .map_err(|e| e.to_string())?;

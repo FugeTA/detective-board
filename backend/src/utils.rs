@@ -1,6 +1,15 @@
 use rand::{distributions::Alphanumeric, Rng};
 use sqlx::PgPool;
 
+/// Normalizes a base URL by removing trailing slashes
+pub fn normalize_base_url(url: &str) -> String {
+    if url.ends_with('/') {
+        url.trim_end_matches('/').to_string()
+    } else {
+        url.to_string()
+    }
+}
+
 /// Generates a 6-character alphanumeric share code.
 /// Provides approximately 2.2 billion possible combinations (36^6).
 pub fn generate_share_code() -> String {
