@@ -17,8 +17,8 @@ export const prepareShareData = async (caseData) => {
   const filesMap = new Map(); // 重複排除のためのMap
 
   for (const node of nodes) {
-    // pdfSrc または imageSrc を処理
-    const srcFields = ['pdfSrc', 'imageSrc'];
+    // pdfSrc, imageSrc, audioSrc または videoSrc を処理
+    const srcFields = ['pdfSrc', 'imageSrc', 'audioSrc', 'videoSrc'];
     
     for (const field of srcFields) {
       const src = node[field];

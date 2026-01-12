@@ -10,7 +10,6 @@ use serde_json::Value;
 use sqlx::Row;
 
 use crate::models::{AppState, ImportResponse, AssetResponse};
-use crate::supabase::generate_signed_url;
 
 pub async fn import_case_handler(
     Path(code): Path<String>,
@@ -55,13 +54,16 @@ pub async fn import_case_handler(
     if let Ok(rows) = assets_rows {
         for row in rows {
             let storage_path: String = row.get("storage_path");
-            if let Ok(url) = generate_signed_url(&state, "case-assets", &storage_path).await {
-                asset_responses.push(AssetResponse {
-                    hash: row.get("file_hash"),
-                    url,
-                    mime: row.get("mime_type"),
-                });
-            }
+            
+            // ★修正: 直接URLではなく、RustのプロキシURLを返す
+            // フロントエンドがアクセスしやすいよう、相対パスまたは環境変数から構築
+            let proxy_url = format!("/api/storage/{}", storage_path);
+            
+            asset_responses.push(AssetResponse {
+                hash: row.get("file_hash"),
+                url: proxy_url,
+                mime: row.get("mime_type"),
+            });
         }
     }
 

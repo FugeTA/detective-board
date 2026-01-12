@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Special+Elite&display=swap');
+
 /* =========================================
    1. 基本設定 & ボード全体
    ========================================= */
@@ -458,7 +460,7 @@ textarea.note-input {
 
 /* フレームタイプ (.frame) */
 .node.frame {
-  background: rgba(100, 120, 180, 0.15);
+  background: rgba(0, 0, 0, 0.3);
   border: 1px dashed rgba(150, 170, 220, 0.6);
   z-index: 0; /* 他のノードより背面 */
   padding-top: 25px; /* タイトル分のスペース */
@@ -510,4 +512,109 @@ textarea.frame-title {
   min-height: auto !important;
   resize: none !important;
   user-select: text !important;
+}
+
+/* =========================================
+   8. モーダル (共有・通知)
+   ========================================= */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: #2d3436;
+  color: white;
+  padding: 30px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  position: relative;
+  min-width: 300px;
+  max-width: 450px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.modal-close-x {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close-x:hover {
+  color: white;
+}
+
+.share-modal h4 {
+  margin: 0 0 10px 0;
+  color: #ff4d4d;
+  font-size: 1.2rem;
+}
+
+.share-modal p {
+  margin: 0 0 20px 0;
+  font-size: 0.9rem;
+  color: #ccc;
+}
+
+.share-code-container {
+  background: #1e272e;
+  padding: 15px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #444;
+  margin-bottom: 15px;
+}
+
+.share-code-text {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.5rem;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #ffd700;
+}
+
+.copy-btn {
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.copy-btn:hover {
+  color: white;
+}
+
+.expires-info {
+  font-size: 0.75rem;
+  color: #888;
+  text-align: right;
+}
+
+.info-modal p {
+  margin: 10px 0;
+  line-height: 1.5;
+  text-align: center;
 }

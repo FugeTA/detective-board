@@ -1,5 +1,6 @@
 // src/components/DrawingLayer.js
 import React from 'react';
+import styles from './DrawingLayer.module.css';
 
 // 点の配列からSVGパスのd属性文字列を生成するヘルパー関数
 const createSvgPath = (points) => {
@@ -14,18 +15,7 @@ const DrawingLayer = ({ drawings, currentDrawing, scale }) => {
   const strokeWidth = 2.5 / scale;
 
   return (
-    <svg
-      className="drawing-layer"
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-        overflow: 'visible', // SVGがはみ出しても表示されるようにする
-      }}
-    >
+    <svg className={styles.container}>
       <g>
         {/* 確定済みの線 */}
         {drawings.map((drawing) => (

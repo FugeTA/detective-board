@@ -32,7 +32,11 @@ export const importCase = async (shareCode, onProgress) => {
       
       if (!exists) {
         try {
-          const res = await fetch(asset.url);
+          // 相対パスの場合はベースURLを付与
+          const downloadUrl = asset.url.startsWith('/') 
+            ? `${cleanBase}${asset.url}` 
+            : asset.url;
+          const res = await fetch(downloadUrl);
           const blob = await res.blob();
           
           // IDBへ保存（キーを asset://hash にする）
@@ -51,11 +55,13 @@ export const importCase = async (shareCode, onProgress) => {
     }));
 
     // 3. 復元したケースデータをIDB（savesテーブル）に保存
+    const now = Date.now();
     const newCase = {
       ...case_data,
       name: `${case_data.name || 'Untitled'} (共有受領)`,
+      nodes: case_data.nodes.map(n => ({ ...n, reloadToken: now })), // 再読み込みを強制
       id: generateId('case'), // 新規保存として扱うためIDを再生成
-      updatedAt: Date.now()
+      updatedAt: now
     };
     
     await db.saves.add(newCase);

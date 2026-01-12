@@ -19,17 +19,25 @@ use sqlx::postgres::PgPoolOptions;
 use crate::models::AppState;
 use crate::handlers::{
     proxy::proxy_pdf_handler,
+    proxy::proxy_storage_asset_handler,
     share::share_case_handler,
     import::import_case_handler,
 };
 
 #[tokio::main]
 async fn main() {
-    dotenv().ok();
+    if let Err(e) = dotenv() {
+        println!("Note: .env file not loaded: {}", e);
+    }
 
     let supabase_url = std::env::var("SUPABASE_URL").expect("SUPABASE_URL must be set");
     let supabase_key = std::env::var("SUPABASE_KEY").expect("SUPABASE_KEY must be set");
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set").trim().to_string();
+
+    // 接続先ホストをログ出力（デバッグ用）
+    if let Some(host) = database_url.split('@').nth(1).and_then(|s| s.split('/').next()) {
+        println!("Attempting to connect to DB host: {}", host);
+    }
 
     let pool = PgPoolOptions::new()
         .max_connections(5)
@@ -53,8 +61,9 @@ async fn main() {
 
     let app = Router::new()
         .route("/api/proxy-pdf", get(proxy_pdf_handler))
+        .route("/api/storage/{*path}", get(proxy_storage_asset_handler))
         .route("/api/share", post(share_case_handler))
-        .route("/api/import/:code", get(import_case_handler))
+        .route("/api/import/{code}", get(import_case_handler))
         .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
         .layer(cors)
         .with_state(state);

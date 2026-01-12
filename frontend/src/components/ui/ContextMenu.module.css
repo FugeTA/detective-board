@@ -1,0 +1,88 @@
+.menu {
+  position: fixed;
+  background: rgba(40, 40, 40, 0.95);
+  border: 1px solid #666;
+  border-radius: 6px;
+  padding: 5px 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 9999;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+  min-width: 160px;
+  backdrop-filter: blur(5px);
+}
+
+.button {
+  background: transparent;
+  color: #eee;
+  border: none;
+  text-align: left;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.9rem;
+  transition: background 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.button:hover {
+  background: var(--accent-color);
+  color: white;
+}
+
+.divider {
+  height: 1px;
+  background: #555;
+  margin: 4px 0;
+}
+
+.label {
+  padding: 4px 12px;
+  color: #888;
+  font-size: 0.75rem;
+}
+
+.colorGrid {
+  padding: 8px 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.colorCircle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 1px solid #ddd;
+  transition: transform 0.1s;
+}
+
+.colorCircleActive {
+  border: 1px solid #2196f3;
+  transform: scale(1.1);
+}
+
+.resetCircle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #555;
+  border: 1px dashed #888;
+}
+
+.fontSizeGrid {
+  padding: 8px 12px;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.deleteBtn {
+  color: #ff6b6b !important;
+}

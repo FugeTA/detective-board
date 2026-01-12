@@ -1,5 +1,5 @@
-import { getPinLocation } from '../utils/math';
-import { generateId } from '../utils/id';
+import { getPinLocation } from '../../utils/math';
+import { generateId } from '../../utils/id';
 
 export const useNodeInteraction = ({
   nodes, setNodes,
@@ -57,18 +57,18 @@ export const useNodeInteraction = ({
     onDoubleClick: (e, id) => { 
       e.stopPropagation(); 
       const node = nodes.find(n => n.id === id);
-      if (node) {
-        if (node.type === 'pin') return;
-        if (node.type === 'photo' && node.imageSrc) {
+      if (node && node.type === 'pin') return;
+      snapshotRef.current = { nodes, edges, drawings }; setEditingId(id); 
+    },
+    onImageDoubleClick: (e, node) => {
+      if ((node.type === 'photo' && node.imageSrc) || (node.type === 'pdf' && node.pdfSrc)) {
+        e.stopPropagation();
+        if (node.type === 'photo') {
           setFullscreenContent({ type: 'photo', src: node.imageSrc });
-          return;
-        }
-        if (node.type === 'pdf' && node.pdfSrc) {
+        } else {
           setFullscreenContent({ type: 'pdf', src: node.pdfSrc, reloadToken: node.reloadToken });
-          return;
         }
       }
-      snapshotRef.current = { nodes, edges, drawings }; setEditingId(id); 
     },
     onPinMouseDown: (e, id) => {
       if (isSpacePressed || e.button === 1) return;

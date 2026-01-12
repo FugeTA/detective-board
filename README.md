@@ -1,70 +1,90 @@
-# Getting Started with Create React App
+# 探偵ボード (Detective Board)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+事件の証拠、写真、資料を整理し、関係図を構築するためのデジタル捜査ボードアプリケーションです。
+オフラインファーストで動作し、作成したケースは「共有コード」を発行することで、他のユーザーと簡単に共有できます。
 
-## Available Scripts
+## 主な機能
 
-In the project directory, you can run:
+- **マルチメディア・ノード**: メモ、写真、PDF、Webリンク、YouTube/Spotify/Vimeoの埋め込みに対応。
+- **コネクション・レイヤー**: ノード間をピンで繋ぎ、視覚的な関係図を構築。
+- **手書き描画**: ボード上に自由に線を引けるペンツールと消しゴム機能。
+- **ケース管理**: 複数の事件ファイルを切り替え・保存。
+- **セキュアな共有**: 
+    - 共有コード（6桁）によるケースの書き出しと読み込み。
+    - アセット（画像・PDF）の重複排除（SHA-256ハッシュ）。
+    - 共有データの有効期限設定（デフォルト7日間）。
+- **オフライン対応**: IndexedDB (Dexie.js) を使用し、ブラウザを閉じてもデータは保持されます。
 
-### `npm start`
+## 技術スタック
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### フロントエンド
+- **React 19**
+- **Zustand**: 状態管理
+- **Dexie.js**: IndexedDBによるローカル永続化
+- **Framer Motion**: アニメーションとドラッグ操作
+- **React-PDF**: PDFのレンダリング
+- **Lucide React**: アイコン
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### バックエンド
+- **Rust (Axum)**: 高速で堅牢なAPIサーバー
+- **SQLx**: 非同期PostgreSQLクエリ
+- **Supabase**: 
+    - **PostgreSQL**: ケースデータとアセットメタデータの保存
+    - **Storage**: 画像・PDFの実体保存
 
-### `npm test`
+## セットアップ
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### 1. Supabaseの準備
+Supabaseプロジェクトを作成し、以下のテーブルをセットアップしてください。
 
-### `npm run build`
+```sql
+-- shared_cases, assets, case_assets テーブルを作成
+-- (詳細は backend/src/handlers/share.rs のコメント等を参照)
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### 2. バックエンド (Rust)
+`backend/.env` ファイルを作成し、環境変数を設定します。
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-service-role-key
+DATABASE_URL=postgresql://postgres.your-id:password@db-host:6543/postgres?pgbouncer=true
+PORT=8000
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+起動方法:
+```bash
+cd backend
+cargo run
+```
 
-### `npm run eject`
+### 3. フロントエンド (React)
+`frontend/.env` ファイルを作成します。
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```env
+REACT_APP_API_URL=http://localhost:8000
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+起動方法:
+```bash
+cd frontend
+npm install
+npm start
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## 共有機能の仕組み
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+1. **送信**: ローカルの画像やPDFをハッシュ化し、未登録のものだけをSupabase Storageにアップロードします。
+2. **コード発行**: サーバーが6桁のランダムな共有コードを生成し、ケースのJSONデータをDBに保存します。
+3. **受信**: コードを入力すると、サーバーからJSONとアセットのプロキシURLが返されます。
+4. **復元**: フロントエンドが不足しているアセットのみをダウンロードし、IndexedDBに格納。ボード上にノードを再構築します。
 
-## Learn More
+## 開発者向け情報
+- **CORS対策**: 画像やPDFのダウンロードは、Supabase Storageから直接ではなく、Rustバックエンドをプロキシとして経由します。これによりブラウザのCORS制限を回避し、セキュアにアセットを取得できます。
+- **メモリ管理**: 拡大表示（Fullscreen）を閉じる際、`URL.revokeObjectURL` を呼び出してメモリリークを防止しています。
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## ライセンス
+MIT
 
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## 謝辞
+- フリーテクスチャ素材館様

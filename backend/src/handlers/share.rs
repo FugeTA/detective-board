@@ -15,6 +15,24 @@ use crate::models::AppState;
 use crate::supabase::upload_to_supabase;
 use crate::utils::generate_share_code;
 
+/// JSON内から asset://<hash> 形式のハッシュを再帰的に抽出する
+fn extract_existing_hashes(value: &Value, hashes: &mut Vec<String>) {
+    match value {
+        Value::String(s) => {
+            if s.starts_with("asset://") {
+                hashes.push(s.replace("asset://", ""));
+            }
+        }
+        Value::Array(arr) => {
+            for v in arr { extract_existing_hashes(v, hashes); }
+        }
+        Value::Object(map) => {
+            for v in map.values() { extract_existing_hashes(v, hashes); }
+        }
+        _ => {}
+    }
+}
+
 pub async fn share_case_handler(
     State(state): State<Arc<AppState>>,
     mut multipart: Multipart,
@@ -39,10 +57,13 @@ pub async fn share_case_handler(
                 };
 
                 let mime = kind.mime_type();
-                let is_valid = mime == "application/pdf" || mime.starts_with("image/");
+                let is_valid = mime == "application/pdf" || 
+                               mime.starts_with("image/") ||
+                               mime.starts_with("audio/") ||
+                               mime.starts_with("video/");
 
                 if !is_valid {
-                    println!("Skipping invalid file type: {}", mime);
+                    eprintln!("Skipping invalid file type: {}. Allowed: PDF, image, audio, or video", mime);
                     continue;
                 }
 
@@ -60,10 +81,6 @@ pub async fn share_case_handler(
                     Ok(Some(row)) => {
                         // Asset exists, update last_accessed_at and reuse ID
                         let id: Uuid = row.get("id");
-                        let _ = sqlx::query("UPDATE assets SET last_accessed_at = NOW() WHERE id = $1")
-                            .bind(id)
-                            .execute(&state.db)
-                            .await;
                         asset_ids.push(id);
                     },
                     Ok(None) => {
@@ -120,6 +137,25 @@ pub async fn share_case_handler(
     }
 
     if let Some(data) = case_data {
+        // JSON内から既存のアセットハッシュを抽出
+        let mut existing_hashes = Vec::new();
+        extract_existing_hashes(&data, &mut existing_hashes);
+
+        // 抽出したハッシュに対応するアセットIDをDBから取得して追加
+        for hash in existing_hashes {
+            let row = sqlx::query("SELECT id FROM assets WHERE file_hash = $1")
+                .bind(&hash)
+                .fetch_optional(&state.db)
+                .await;
+            
+            if let Ok(Some(r)) = row {
+                let id: Uuid = r.get("id");
+                if !asset_ids.contains(&id) {
+                    asset_ids.push(id);
+                }
+            }
+        }
+
         let share_code = generate_share_code();
         let expires_at = Utc::now() + Duration::days(7);
 
@@ -137,13 +173,15 @@ pub async fn share_case_handler(
                 let case_id: Uuid = r.get("id");
 
                 for asset_id in asset_ids {
-                    let _ = sqlx::query(
+                    if let Err(e) = sqlx::query(
                         "INSERT INTO case_assets (case_id, asset_id) VALUES ($1, $2) ON CONFLICT DO NOTHING"
                     )
                     .bind(case_id)
                     .bind(asset_id)
                     .execute(&state.db)
-                    .await;
+                    .await {
+                        eprintln!("Failed to link asset {} to case {}: {:?}", asset_id, case_id, e);
+                    }
                 }
 
                 return Json(json!({
