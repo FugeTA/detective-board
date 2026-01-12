@@ -13,7 +13,40 @@ use uuid::Uuid;
 
 use crate::models::AppState;
 use crate::supabase::upload_to_supabase;
-use crate::utils::generate_share_code;
+use crate::utils::generate_unique_share_code;
+
+/// Whitelist of allowed MIME types for uploaded files
+const ALLOWED_MIME_TYPES: &[&str] = &[
+    // Images
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "image/svg+xml",
+    "image/bmp",
+    "image/tiff",
+    // Videos
+    "video/mp4",
+    "video/webm",
+    "video/ogg",
+    "video/quicktime",
+    "video/x-msvideo",
+    // Audio
+    "audio/mpeg",
+    "audio/mp3",
+    "audio/wav",
+    "audio/ogg",
+    "audio/webm",
+    "audio/aac",
+    "audio/flac",
+    // Documents
+    "application/pdf",
+];
+
+/// Validates that the MIME type is in the whitelist
+fn is_mime_type_allowed(mime: &str) -> bool {
+    ALLOWED_MIME_TYPES.contains(&mime)
+}
 
 /// JSON内から asset://<hash> 形式のハッシュを再帰的に抽出する
 fn extract_existing_hashes(value: &Value, hashes: &mut Vec<String>) {
@@ -57,13 +90,10 @@ pub async fn share_case_handler(
                 };
 
                 let mime = kind.mime_type();
-                let is_valid = mime == "application/pdf" || 
-                               mime.starts_with("image/") ||
-                               mime.starts_with("audio/") ||
-                               mime.starts_with("video/");
-
-                if !is_valid {
-                    eprintln!("Skipping invalid file type: {}. Allowed: PDF, image, audio, or video", mime);
+                
+                // Use whitelist validation instead of permissive prefix matching
+                if !is_mime_type_allowed(mime) {
+                    eprintln!("Skipping disallowed file type: {}. See ALLOWED_MIME_TYPES for valid types.", mime);
                     continue;
                 }
 
@@ -156,7 +186,13 @@ pub async fn share_case_handler(
             }
         }
 
-        let share_code = generate_share_code();
+        let share_code = match generate_unique_share_code(&state.db).await {
+            Ok(code) => code,
+            Err(e) => {
+                eprintln!("Failed to generate unique share code: {}", e);
+                return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to generate share code").into_response();
+            }
+        };
         let expires_at = Utc::now() + Duration::days(7);
 
         let case_row = sqlx::query(

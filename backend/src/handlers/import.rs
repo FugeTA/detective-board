@@ -10,6 +10,7 @@ use serde_json::Value;
 use sqlx::Row;
 
 use crate::models::{AppState, ImportResponse, AssetResponse};
+use crate::utils::normalize_base_url;
 
 pub async fn import_case_handler(
     Path(code): Path<String>,
@@ -55,9 +56,9 @@ pub async fn import_case_handler(
         for row in rows {
             let storage_path: String = row.get("storage_path");
             
-            // ★修正: 直接URLではなく、RustのプロキシURLを返す
-            // フロントエンドがアクセスしやすいよう、相対パスまたは環境変数から構築
-            let proxy_url = format!("/api/storage/{}", storage_path);
+            // Return absolute URL using backend_url from environment
+            let backend_base = normalize_base_url(&state.backend_url);
+            let proxy_url = format!("{}/api/storage/{}", backend_base, storage_path);
             
             asset_responses.push(AssetResponse {
                 hash: row.get("file_hash"),

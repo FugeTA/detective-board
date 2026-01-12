@@ -8,6 +8,7 @@ pub struct AppState {
     pub supabase_key: String,
     pub client: Client,
     pub db: Pool<Postgres>,
+    pub backend_url: String,
 }
 
 #[derive(Deserialize)]

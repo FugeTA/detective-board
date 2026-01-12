@@ -12,7 +12,6 @@ pub async fn upload_to_supabase(
     let res = state.client.post(&url)
         .header("Authorization", format!("Bearer {}", state.supabase_key))
         .header("apikey", &state.supabase_key)
-        .header("x-upsert", "true") // 同一ハッシュのファイルが存在する場合に上書き（エラー回避）を許可
         .header("Content-Type", mime_type)
         .body(data)
         .send()
@@ -20,6 +19,10 @@ pub async fn upload_to_supabase(
         .map_err(|e| e.to_string())?;
 
     if res.status().is_success() {
+        Ok(())
+    } else if res.status().as_u16() == 409 {
+        // File already exists (conflict) - this is acceptable since we use content-based hashing
+        // The same hash means the same content, so no need to re-upload
         Ok(())
     } else {
         Err(format!("Supabase error: {}", res.status()))
