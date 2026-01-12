@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { isPointNearDrawing, lineIntersectsRect } from '../utils/geometry';
-import { getPinLocationById } from '../utils/math';
+import { isPointNearDrawing, lineIntersectsRect } from '../../utils/geometry';
+import { getPinLocationById } from '../../utils/math';
 
 export const useBoardInteraction = ({
   view, setView,

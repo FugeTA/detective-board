@@ -4,7 +4,7 @@ import { generateId } from '../utils/id';
 export const useStore = create((set, get) => ({
   // --- Board Data ---
   nodes: [
-    { id: 1, x: 100, y: 150, width: 220, height: 260, type: 'photo', content: 'Suspect A', imageSrc: null, rotation: -5, parentId: null },
+    { id: 1, x: 100, y: 150, width: 220, height: 260, type: 'photo', content: 'Suspect A', imageSrc: null, rotation: -5, parentId: null, color: '#ffffff' },
   ],
   edges: [],
   keywords: [],
@@ -13,6 +13,7 @@ export const useStore = create((set, get) => ({
   history: [],
 
   // --- UI State ---
+  theme: 'modern', // 'modern' | 'retro'
   activeSidebar: null,
   editingId: null,
   selectedIds: new Set(),
@@ -35,6 +36,7 @@ export const useStore = create((set, get) => ({
   setDrawings: (drawings) => set(state => ({ drawings: typeof drawings === 'function' ? drawings(state.drawings) : drawings })),
   setView: (view) => set(state => ({ view: typeof view === 'function' ? view(state.view) : view })),
   
+  setTheme: (theme) => set({ theme }),
   setActiveSidebar: (activeSidebar) => set(state => ({ activeSidebar: typeof activeSidebar === 'function' ? activeSidebar(state.activeSidebar) : activeSidebar })),
   setEditingId: (editingId) => set({ editingId }),
   setSelectedIds: (selectedIds) => set(state => ({ selectedIds: typeof selectedIds === 'function' ? selectedIds(state.selectedIds) : selectedIds })),
@@ -76,6 +78,7 @@ export const useStore = create((set, get) => ({
       keywords: data.keywords || [],
       drawings: data.drawings || [],
       view: data.view || { x: 0, y: 0, scale: 1 },
+      theme: data.theme || 'modern',
       history: []
     });
   }

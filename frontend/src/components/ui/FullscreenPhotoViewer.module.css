@@ -1,0 +1,11 @@
+.image {
+  max-width: 95%;
+  max-height: 95%;
+  object-fit: contain;
+  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+.loading {
+  color: white;
+  font-size: 1.2rem;
+}

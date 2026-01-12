@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { db } from '../db';
-import { useStore } from '../store/useStore';
-import { generateId } from '../utils/id';
+import { db } from '../../db';
+import { useStore } from '../../store/useStore';
+import { generateId } from '../../utils/id';
+import { prepareShareData } from '../../utils/sharing';
+import { importCase as importCaseUtil } from '../../utils/importing';
 
 export const useCaseManagement = () => {
   const [currentCaseId, setCurrentCaseId] = useState(null);
@@ -9,7 +11,7 @@ export const useCaseManagement = () => {
   const [saveStatus, setSaveStatus] = useState(null);
   const clearStatusTimer = useRef(null);
 
-  const { nodes, edges, keywords, drawings, view, loadData } = useStore();
+  const { nodes, edges, keywords, drawings, view, theme, loadData } = useStore();
 
   // 初期化
   useEffect(() => {
@@ -21,8 +23,9 @@ export const useCaseManagement = () => {
           id: newId, 
           name: 'Case #1', 
           updatedAt: Date.now(), 
-          nodes: useStore.getState().nodes, // 初期値を取得
-          view: useStore.getState().view 
+          nodes: useStore.getState().nodes,
+          view: useStore.getState().view,
+          theme: useStore.getState().theme
         };
         await db.saves.add(newCase);
         setCaseList([{ id: newId, name: 'Case #1', updatedAt: Date.now() }]);
@@ -43,7 +46,7 @@ export const useCaseManagement = () => {
     if (!currentCaseId) return;
     setSaveStatus('saving');
     try {
-      await db.saves.update(currentCaseId, { nodes, edges, keywords, view, drawings, updatedAt: Date.now() });
+      await db.saves.update(currentCaseId, { nodes, edges, keywords, view, drawings, theme, updatedAt: Date.now() });
       setSaveStatus('saved');
       setCaseList(prev => prev.map(c => c.id === currentCaseId ? { ...c, updatedAt: Date.now() } : c));
       
@@ -53,7 +56,7 @@ export const useCaseManagement = () => {
       console.error("Save failed:", error);
       setSaveStatus('error');
     }
-  }, [currentCaseId, nodes, edges, keywords, view, drawings]);
+  }, [currentCaseId, nodes, edges, keywords, view, drawings, theme]);
 
   // 自動保存
   useEffect(() => {
@@ -72,7 +75,7 @@ export const useCaseManagement = () => {
 
   const openCase = async (id) => {
     if (id === currentCaseId) return;
-    await db.saves.update(currentCaseId, { nodes, edges, keywords, view, drawings, updatedAt: Date.now() });
+    await db.saves.update(currentCaseId, { nodes, edges, keywords, view, drawings, theme, updatedAt: Date.now() });
     const targetCase = await db.saves.get(id);
     if (targetCase) {
       setCurrentCaseId(id);
@@ -87,8 +90,9 @@ export const useCaseManagement = () => {
       id: newId, 
       name: newName, 
       updatedAt: Date.now(), 
-      nodes: [], edges: [], keywords: [], drawings: [], 
-      view: { x: 0, y: 0, scale: 1 } 
+      nodes: [], edges: [], keywords: [], drawings: [],
+      view: { x: 0, y: 0, scale: 1 },
+      theme: 'modern'
     };
     await db.saves.add(newCase);
     setCaseList(prev => [{ id: newId, name: newName, updatedAt: Date.now() }, ...prev]);
@@ -159,5 +163,76 @@ export const useCaseManagement = () => {
     }
   }, [nodes]);
 
-  return { currentCaseId, caseList, saveStatus, openCase, createCase, deleteCase, renameCase, saveCase, cleanupUnusedCache };
+  // 共有機能 (Rustバックエンドへ送信)
+  const shareCase = useCallback(async () => {
+    if (!currentCaseId) return null;
+    setSaveStatus('saving');
+    try {
+      // 1. データの準備
+      const caseData = {
+        nodes,
+        edges,
+        keywords,
+        view,
+        drawings,
+        theme,
+        name: caseList.find(c => c.id === currentCaseId)?.name || 'Untitled'
+      };
+
+      const { cleanJson, files } = await prepareShareData(caseData);
+
+      // 2. FormDataの作成
+      const formData = new FormData();
+      formData.append('case_data', JSON.stringify(cleanJson));
+      
+      files.forEach((blob) => {
+        formData.append('files[]', blob);
+      });
+
+      // 3. 送信
+      const apiBase = process.env.REACT_APP_API_URL || "http://localhost:8000";
+      const cleanBase = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase;
+      
+      const response = await fetch(`${cleanBase}/api/share`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Upload failed');
+      
+      const result = await response.json();
+      setSaveStatus('saved');
+      
+      if (clearStatusTimer.current) clearTimeout(clearStatusTimer.current);
+      clearStatusTimer.current = setTimeout(() => setSaveStatus(null), 2000);
+      
+      return result; // { share_code: "...", expires_at: "..." }
+    } catch (error) {
+      console.error("Share error:", error);
+      setSaveStatus('error');
+      throw error;
+    }
+  }, [currentCaseId, nodes, edges, keywords, view, drawings, theme, caseList]);
+
+  // インポート機能
+  const importCase = useCallback(async (shareCode, onProgress) => {
+    try {
+      const newCase = await importCaseUtil(shareCode, onProgress);
+      // リストを更新
+      setCaseList(prev => [{ 
+        id: newCase.id, 
+        name: newCase.name, 
+        updatedAt: newCase.updatedAt 
+      }, ...prev]);
+      // インポートしたケースを開く
+      setCurrentCaseId(newCase.id);
+      loadData(newCase);
+      return newCase.id;
+    } catch (error) {
+      console.error("Import action failed:", error);
+      throw error;
+    }
+  }, [loadData]);
+
+  return { currentCaseId, caseList, saveStatus, openCase, createCase, deleteCase, renameCase, saveCase, cleanupUnusedCache, shareCase, importCase };
 };

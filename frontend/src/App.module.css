@@ -1,0 +1,104 @@
+.board {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--board-bg);
+  user-select: none;
+  transition: background-color 0.3s ease;
+}
+
+/* ボード表面のザラつき（ノイズフィルタ） */
+.board[data-theme='retro']::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  filter: url(#cork-grain);
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+/* ドラッグ中は背景の遷移などを止めて負荷を減らす */
+.board[data-is-dragging='true'] {
+  transition: none;
+}
+
+.drawingMode {
+  cursor: crosshair;
+}
+
+.transformLayer {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+.saveStatus {
+  color: white;
+  font-size: 0.8rem;
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 10;
+  padding: 2px 8px;
+  background-color: rgba(0,0,0,0.3);
+  border-radius: 10px;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fullscreenOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0,0,0,0.85);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: default;
+}
+
+.toolbar {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  gap: 10px;
+}
+
+.toolButton {
+  background: #333;
+  color: white;
+  border: 1px solid #555;
+  padding: 10px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+  border-radius: 4px;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toolButtonActive {
+  background: var(--accent-color) !important;
+  border-color: var(--accent-color) !important;
+}
+
+.selectionBox {
+  position: absolute;
+  border: 1px solid #00d2ff;
+  background-color: rgba(0, 210, 255, 0.2);
+  z-index: 9999;
+  pointer-events: none;
+}

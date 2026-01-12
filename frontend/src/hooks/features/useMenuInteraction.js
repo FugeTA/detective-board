@@ -1,6 +1,6 @@
-import { isPointNearDrawing } from '../utils/geometry';
-import { generateId } from '../utils/id';
-import { getRandomRotation } from '../utils/math';
+import { isPointNearDrawing } from '../../utils/geometry';
+import { generateId } from '../../utils/id';
+import { getRandomRotation } from '../../utils/math';
 
 export const useMenuInteraction = ({
   menu, setMenu,
@@ -75,11 +75,11 @@ export const useMenuInteraction = ({
       const newId = generateId('node');
       let newNode;
       if (payload === 'frame') {
-        newNode = { id: newId, x: menu.worldX, y: menu.worldY, width: 400, height: 300, type: 'frame', content: 'Group', imageSrc: null, rotation: 0, parentId: null, textColor: '#ffffff' };
+        newNode = { id: newId, x: menu.worldX, y: menu.worldY, width: 400, height: 300, type: 'frame', content: 'Group', imageSrc: null, rotation: 0, parentId: null, textColor: '#ffffff', color: 'rgba(0, 0, 0, 0.3)' };
       } else if (payload === 'pin') {
-        newNode = { id: newId, x: menu.worldX - 15, y: menu.worldY - 15, width: 30, height: 30, type: 'pin', content: '', imageSrc: null, rotation: 0, parentId: null, color: '#d63031' };
+        newNode = { id: newId, x: menu.worldX - 15, y: menu.worldY - 15, width: 30, height: 30, type: 'pin', content: '', imageSrc: null, rotation: 0, parentId: null, color: '#ffffff' };
       } else {
-        newNode = { id: newId, x: menu.worldX, y: menu.worldY, width: 180, height: payload === 'photo' ? 220 : 150, type: payload, content: '', imageSrc: null, rotation: getRandomRotation(), parentId: null };
+        newNode = { id: newId, x: menu.worldX, y: menu.worldY, width: 180, height: payload === 'photo' ? 220 : 150, type: payload, content: '', imageSrc: null, rotation: getRandomRotation(), parentId: null, color: payload === 'note' ? '#fff9c4' : '#ffffff' };
       }
       setNodes([...nodes, newNode]);
       if (menu.type === 'connection') { 
@@ -133,7 +133,8 @@ export const useMenuInteraction = ({
             id: newFrameId, x: frameX, y: frameY,
             width: frameWidth, height: frameHeight,
             type: 'frame', content: 'New Group',
-            imageSrc: null, rotation: 0, parentId: null
+            imageSrc: null, rotation: 0, parentId: null,
+            color: 'rgba(0, 0, 0, 0.3)'
         };
 
         const updatedNodes = prevNodes.map(node => {

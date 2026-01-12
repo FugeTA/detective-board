@@ -1,0 +1,42 @@
+.container {
+  width: 90%;
+  height: 90%;
+  background: #525659;
+  display: flex;
+  flex-direction: column;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+.toolbar {
+  background: #333;
+  padding: 10px;
+  color: white;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+}
+
+.content {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+.closeButton {
+  background: #d63031;
+  border: none;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.loading {
+  color: white;
+  margin-top: 20px;
+}

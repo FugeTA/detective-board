@@ -1,0 +1,34 @@
+.photoInner {
+  width: 100%;
+  flex: 0 0 auto;
+  height: auto;
+  background-color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #777;
+  font-size: 0.8rem;
+  overflow: hidden;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  min-height: 150px;
+}
+
+.hasImage {
+  min-height: 0;
+  background-color: transparent;
+}
+
+.video, .audio {
+  width: 100%;
+}
+
+.video {
+  border-radius: 2px;
+}
+
+.audioContainer {
+  width: 100%;
+  padding: 10px;
+}
