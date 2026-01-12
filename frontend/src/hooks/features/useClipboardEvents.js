@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
-import { getYouTubeId, getVimeoId, getSpotifyId } from '../utils/media';
-import { generateId } from '../utils/id';
-import { getRandomRotation } from '../utils/math';
+import { getYouTubeId, getVimeoId, getSpotifyId } from '../../utils/media';
+import { generateId } from '../../utils/id';
+import { getRandomRotation } from '../../utils/math';
 
 export const useClipboardEvents = ({
   view,
@@ -12,7 +12,11 @@ export const useClipboardEvents = ({
 }) => {
   useEffect(() => {
     const handlePaste = (event) => {
-      if (editingId !== null) return;
+      // 入力フィールド（サイドバーの共有コード入力欄など）にフォーカスがある場合は、
+      // ボードへのノード作成処理をスキップする
+      const isInputFocused = event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA';
+      if (editingId !== null || isInputFocused) return;
+
       const items = event.clipboardData.items;
       
       // PDFファイルのペースト
@@ -35,6 +39,7 @@ export const useClipboardEvents = ({
             type: 'pdf',
             content: '',
             pdfSrc: base64,
+            color: '#ffffff',
             rotation: getRandomRotation(),
             parentId: null,
           };
@@ -76,6 +81,7 @@ export const useClipboardEvents = ({
               type: 'photo',
               content: '',
               imageSrc: base64,
+              color: '#ffffff',
               rotation: getRandomRotation(),
               aspectRatio: ratio,
               parentId: null,
@@ -101,7 +107,7 @@ export const useClipboardEvents = ({
         const isUrl = /^(https?|file):\/\//.test(cleanText);
 
         // 画像URLの判定 (Paste時も有効にする)
-        if (isUrl && /\.(jpg|jpeg|png|gif|webp|svg)($|\?|#)/i.test(cleanText)) {
+        if (isUrl && /\.(jpg|jpeg|png|gif|webp|svg|avif|bmp|tiff|ico)($|\?|#)/i.test(cleanText)) {
             const img = new Image();
             img.src = cleanText;
             img.onload = () => {
@@ -122,6 +128,7 @@ export const useClipboardEvents = ({
                     type: 'photo',
                     content: '',
                     imageSrc: cleanText,
+                    color: '#ffffff',
                     rotation: getRandomRotation(),
                     aspectRatio: ratio,
                     parentId: null,
@@ -135,7 +142,7 @@ export const useClipboardEvents = ({
         let isPdfUrl = false;
         if (isUrl) {
           // 正規表現でチェック (.pdfの後にスラッシュ、クエリ、ハッシュ、または行末が来る場合)
-          if (/\.pdf([?#\/]|$)/i.test(cleanText)) {
+          if (/\.pdf([?#/]|$)/i.test(cleanText)) {
             isPdfUrl = true;
           } else {
             try {
@@ -171,6 +178,7 @@ export const useClipboardEvents = ({
           type: type,
           content: cleanText,
           imageSrc: null,
+          color: type === 'note' ? '#fff9c4' : '#ffffff',
           pdfSrc: isPdfUrl ? cleanText : null,
           rotation: getRandomRotation(),
           parentId: null,
@@ -212,6 +220,7 @@ export const useClipboardEvents = ({
             type: 'pdf',
             content: '',
             pdfSrc: base64,
+            color: '#ffffff',
             rotation: getRandomRotation(),
             parentId: null,
           };
@@ -244,6 +253,7 @@ export const useClipboardEvents = ({
               type: 'photo',
               content: '',
               imageSrc: base64,
+              color: '#ffffff',
               rotation: getRandomRotation(),
               aspectRatio: ratio,
               parentId: null,
@@ -271,7 +281,7 @@ export const useClipboardEvents = ({
         const isUrl = /^(https?|file):\/\//.test(text);
 
         // 画像URLの可能性がある場合 (拡張子で簡易判定)
-        if (isUrl && /\.(jpg|jpeg|png|gif|webp|svg)($|\?|#)/i.test(text)) {
+        if (isUrl && /\.(jpg|jpeg|png|gif|webp|svg|avif|bmp|tiff|ico)($|\?|#)/i.test(text)) {
             pushHistory();
             const img = new Image();
             img.src = text;
@@ -290,6 +300,7 @@ export const useClipboardEvents = ({
                     type: 'photo',
                     content: '',
                     imageSrc: text,
+                    color: '#ffffff',
                     rotation: getRandomRotation(),
                     aspectRatio: ratio,
                     parentId: null,
@@ -304,7 +315,7 @@ export const useClipboardEvents = ({
         let isPdfUrl = false;
         if (isUrl) {
           // 正規表現でチェック
-          if (/\.pdf([?#\/]|$)/i.test(text)) {
+          if (/\.pdf([?#/]|$)/i.test(text)) {
             isPdfUrl = true;
           } else {
             try {
@@ -337,6 +348,7 @@ export const useClipboardEvents = ({
           type: type,
           content: text,
           imageSrc: null,
+          color: type === 'note' ? '#fff9c4' : '#ffffff',
           pdfSrc: isPdfUrl ? text : null,
           rotation: getRandomRotation(),
           parentId: null,

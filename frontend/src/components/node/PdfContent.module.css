@@ -1,0 +1,62 @@
+.container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #525659;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.toolbar {
+  padding: 8px 12px;
+  background: #333;
+  color: #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.grab { cursor: grab; }
+.move { cursor: move; }
+
+.label { font-weight: bold; }
+
+.controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.button {
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 0.9rem;
+}
+
+.externalLink {
+  color: #eee;
+  margin-left: 8px;
+  display: flex;
+}
+
+.content {
+  width: 100%;
+  min-height: 100px;
+  background: #e9ecef;
+  display: flex;
+  justify-content: center;
+  padding: 10px 0;
+  user-select: text;
+  cursor: auto;
+  line-height: 1.0;
+}
+
+.documentWrapper {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.status {
+  padding: 10px;
+  font-size: 0.8rem;
+}

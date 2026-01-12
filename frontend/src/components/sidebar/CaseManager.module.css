@@ -1,0 +1,132 @@
+.sidebar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 250px;
+  height: 100vh;
+  background: #222;
+  border-right: 1px solid #444;
+  z-index: 1600;
+  padding: 70px 20px 20px 20px;
+  color: #eee;
+  display: flex;
+  flex-direction: column;
+}
+
+.toggle {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 2000;
+  background: #333;
+  color: white;
+  border: 1px solid #555;
+  padding: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.createBtn {
+  width: 100%;
+  margin-bottom: 15px;
+  background: #444;
+  color: white;
+  border: 1px solid #555;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cleanupBtn {
+  background: #444;
+  border: 1px solid #666;
+  margin-bottom: 20px;
+  font-size: 0.8rem;
+}
+
+.shareSection {
+  border-top: 1px solid #444;
+  padding-top: 15px;
+  margin-bottom: 15px;
+}
+
+.shareBtn {
+  background: #2d3436;
+}
+
+.importRow {
+  display: flex;
+  gap: 5px;
+}
+
+.importInput {
+  flex: 1;
+  background: #222;
+  color: white;
+  border: 1px solid #555;
+  user-select: text;
+  padding: 5px;
+}
+
+.importBtn {
+  margin: 0;
+  padding: 5px 10px;
+  width: auto;
+}
+
+.list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #444;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.item:hover {
+  background: #333;
+}
+
+.itemActive {
+  background: #444;
+  border-left: 3px solid var(--accent-color);
+}
+
+.icon {
+  font-size: 1.5rem;
+  margin-right: 10px;
+}
+
+.info {
+  flex: 1;
+  overflow: hidden;
+}
+
+.name {
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.date {
+  font-size: 0.7rem;
+  color: #888;
+}
+
+.deleteBtn {
+  background: transparent;
+  border: none;
+  color: #666;
+  font-size: 1.2rem;
+  margin-left: 5px;
+  cursor: pointer;
+}

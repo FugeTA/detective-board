@@ -1,22 +1,22 @@
-import { useCaseManagement } from './useCaseManagement';
-import { useDrawingTools } from './useDrawingTools';
-import { useBoardInteraction } from './useBoardInteraction';
-import { useClipboardEvents } from './useClipboardEvents';
-import { useNodeInteraction } from './useNodeInteraction';
-import { useEdgeInteraction } from './useEdgeInteraction';
-import { useMenuInteraction } from './useMenuInteraction';
-import { useKeyboardShortcuts } from './useKeyboardShortcuts';
-import { useStore } from '../store/useStore';
+import { useCaseManagement } from '../interaction/useCaseManagement';
+import { useDrawingTools } from '../interaction/useDrawingTools';
+import { useBoardInteraction } from '../features/useBoardInteraction';
+import { useClipboardEvents } from '../features/useClipboardEvents';
+import { useNodeInteraction } from '../features/useNodeInteraction';
+import { useEdgeInteraction } from '../features/useEdgeInteraction';
+import { useMenuInteraction } from '../features/useMenuInteraction';
+import { useKeyboardShortcuts } from '../features/useKeyboardShortcuts';
+import { useStore } from '../../store/useStore';
 import { useRef } from 'react';
 
 export const useDetectiveBoard = () => {
   // ストアから状態と関数を取得
   const store = useStore();
-  const { nodes, edges, keywords, drawings, view, activeSidebar, editingId, selectedIds, connectionDraft, menu, fullscreenContent, isDrawingMode, currentDrawing, penColor, drawingTool, isErasing, dragInfo } = store;
+  const { nodes, edges, keywords, drawings, view, activeSidebar, editingId, selectedIds, connectionDraft, menu, fullscreenContent, isDrawingMode, currentDrawing, penColor, drawingTool, isErasing, dragInfo, theme, setTheme } = store;
   const fileInputRef = useRef(null);
 
   // 各種フック
-  const { currentCaseId, caseList, saveStatus, openCase: baseOpenCase, createCase, deleteCase, renameCase, saveCase, cleanupUnusedCache } = useCaseManagement();
+  const { currentCaseId, caseList, saveStatus, openCase: baseOpenCase, createCase, deleteCase, renameCase, saveCase, cleanupUnusedCache, shareCase, importCase } = useCaseManagement();
   const { toggleDrawingMode, clearDrawings, eraseAt } = useDrawingTools();
 
   // 派生ステート
@@ -124,7 +124,7 @@ export const useDetectiveBoard = () => {
   };
 
   const caseActions = {
-    openCase, createCase, deleteCase, renameCase, cleanupUnusedCache,
+    openCase, createCase, deleteCase, renameCase, cleanupUnusedCache, shareCase, importCase,
     toggleOpen: () => store.setActiveSidebar(prev => prev === 'case' ? null : 'case')
   };
 
@@ -143,6 +143,7 @@ export const useDetectiveBoard = () => {
   };
 
   return {
+    theme, setTheme,
     nodes, edges, view, menu, keywords, editingId, selectedIds, connectionDraft, selectionBox, fileInputRef, saveStatus,
     isNotebookOpen, isCaseManagerOpen,
     currentCaseId, caseList,
