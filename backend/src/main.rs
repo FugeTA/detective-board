@@ -33,6 +33,7 @@ async fn main() {
     let supabase_url = std::env::var("SUPABASE_URL").expect("SUPABASE_URL must be set");
     let supabase_key = std::env::var("SUPABASE_KEY").expect("SUPABASE_KEY must be set");
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set").trim().to_string();
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://localhost:8000".to_string());
 
     // 接続先ホストをログ出力（デバッグ用）
     if let Some(host) = database_url.split('@').nth(1).and_then(|s| s.split('/').next()) {
@@ -50,6 +51,7 @@ async fn main() {
         supabase_key,
         client: Client::new(),
         db: pool,
+        backend_url,
     });
 
     let cors = CorsLayer::new()

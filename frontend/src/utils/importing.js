@@ -14,7 +14,9 @@ export const importCase = async (shareCode, onProgress) => {
     if (!response.ok) {
       if (response.status === 404) throw new Error("共有コードが見つかりません。");
       if (response.status === 410) throw new Error("有効期限が切れています。");
-      throw new Error("データの取得に失敗しました。");
+      if (response.status === 500) throw new Error("サーバーエラーが発生しました。");
+      if (response.status === 503) throw new Error("サービスが一時的に利用できません。");
+      throw new Error(`データの取得に失敗しました (HTTP ${response.status})。`);
     }
     
     const { case_data, assets } = await response.json();

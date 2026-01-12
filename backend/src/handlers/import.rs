@@ -55,9 +55,13 @@ pub async fn import_case_handler(
         for row in rows {
             let storage_path: String = row.get("storage_path");
             
-            // ★修正: 直接URLではなく、RustのプロキシURLを返す
-            // フロントエンドがアクセスしやすいよう、相対パスまたは環境変数から構築
-            let proxy_url = format!("/api/storage/{}", storage_path);
+            // Return absolute URL using backend_url from environment
+            let backend_base = if state.backend_url.ends_with('/') {
+                state.backend_url.trim_end_matches('/').to_string()
+            } else {
+                state.backend_url.clone()
+            };
+            let proxy_url = format!("{}/api/storage/{}", backend_base, storage_path);
             
             asset_responses.push(AssetResponse {
                 hash: row.get("file_hash"),
