@@ -18,6 +18,7 @@ const EmbedContent = ({ node, isSpacePressed }) => {
           src={`https://www.youtube.com/embed/${getYouTubeId(node.content)}`}
           allowFullScreen
           onMouseDown={(e) => e.stopPropagation()}
+          title="YouTube video player"
         ></iframe>
       </div>
     );
@@ -32,6 +33,7 @@ const EmbedContent = ({ node, isSpacePressed }) => {
           allow="autoplay; fullscreen; picture-in-picture"
           allowFullScreen
           onMouseDown={(e) => e.stopPropagation()}
+          title="Vimeo video player"
         ></iframe>
       </div>
     );
@@ -47,6 +49,7 @@ const EmbedContent = ({ node, isSpacePressed }) => {
             src={`https://open.spotify.com/embed/${info.type}/${info.id}`}
             allow="encrypted-media"
             onMouseDown={(e) => e.stopPropagation()}
+            title="Spotify player"
           ></iframe>
         ) : (
           <div className={styles.spotifyError}>Invalid Spotify URL</div>

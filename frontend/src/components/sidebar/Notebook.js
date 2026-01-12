@@ -1,8 +1,6 @@
 // src/components/Notebook.js
 import React, { useState } from 'react';
 import { Book, Plus, X } from 'lucide-react';
-import styles from './Notebook.module.css';
-import clsx from 'clsx';
 import { motion } from 'framer-motion';
 
 const Notebook = ({ 

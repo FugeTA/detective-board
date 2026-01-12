@@ -54,9 +54,8 @@ const FullscreenPdfViewer = ({ src, reloadToken, onClose }) => {
             }
           } catch (e) { console.error(e); }
         } else {
-          // Asset URL not found in cache - notify user
+          // Asset URL not found in cache - log error
           console.error(`Asset not found in cache: ${src}`);
-          if (onError) onError(new Error('Asset not found in cache'));
         }
       }
 

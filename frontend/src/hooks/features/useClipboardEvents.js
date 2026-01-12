@@ -142,7 +142,7 @@ export const useClipboardEvents = ({
         let isPdfUrl = false;
         if (isUrl) {
           // 正規表現でチェック (.pdfの後にスラッシュ、クエリ、ハッシュ、または行末が来る場合)
-          if (/\.pdf([?#\/]|$)/i.test(cleanText)) {
+          if (/\.pdf([?#/]|$)/i.test(cleanText)) {
             isPdfUrl = true;
           } else {
             try {
@@ -315,7 +315,7 @@ export const useClipboardEvents = ({
         let isPdfUrl = false;
         if (isUrl) {
           // 正規表現でチェック
-          if (/\.pdf([?#\/]|$)/i.test(text)) {
+          if (/\.pdf([?#/]|$)/i.test(text)) {
             isPdfUrl = true;
           } else {
             try {
