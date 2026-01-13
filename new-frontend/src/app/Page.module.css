@@ -1,0 +1,63 @@
+.main {
+  position: relative;
+  min-height: 100vh;
+  background: var(--bg-color);
+  background-image: var(--board-bg-image);
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+  padding: 0;
+  transition: background-color 0.3s ease, background-image 0.3s ease;
+}
+
+.themeToggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.themeToggle button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 2px solid var(--accent-color);
+  background: var(--node-bg);
+  color: var(--node-text);
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+
+.board {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-color);
+}
+
+.transformLayer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  transform-origin: 0 0;
+}
+
+.contentLayer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+}
+
+.selectionBox {
+  position: absolute;
+  border: 1px solid #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+  pointer-events: none;
+}

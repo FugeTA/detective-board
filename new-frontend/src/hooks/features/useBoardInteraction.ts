@@ -192,49 +192,29 @@ export function useBoardInteraction({
         console.log('📐 resize check:', { nodeFound: !!node, originalFound: !!original, handle: dragInfo.resizeHandle });
         if (node && original && dragInfo.resizeHandle) {
           const minSize = 50;
-          
-          // 回転を考慮した座標変換
-          const rotation = original.rotation || 0;
-          const rad = (rotation * Math.PI) / 180;
-          const cos = Math.cos(rad);
-          const sin = Math.sin(rad);
-          
-          // ドラッグ距離をノードのローカル座標に変換
-          const localDx = dx * cos + dy * sin;
-          const localDy = -dx * sin + dy * cos;
-          
           let newWidth = original.width || 240;
           let newHeight = original.height || 120;
           let newX = original.position.x;
           let newY = original.position.y;
 
           const handle = dragInfo.resizeHandle;
-          const centerDx = (newWidth / 2) * (handle.includes('e') ? 1 : handle.includes('w') ? -1 : 0);
-          const centerDy = (newHeight / 2) * (handle.includes('s') ? 1 : handle.includes('n') ? -1 : 0);
 
-          if (handle.includes('e')) newWidth = Math.max(minSize, original.width! + localDx);
+          // 右・左
+          if (handle.includes('e')) {
+            newWidth = Math.max(minSize, (original.width || 240) + dx);
+          }
           if (handle.includes('w')) {
-            newWidth = Math.max(minSize, original.width! - localDx);
-          }
-          if (handle.includes('s')) newHeight = Math.max(minSize, original.height! + localDy);
-          if (handle.includes('n')) {
-            newHeight = Math.max(minSize, original.height! - localDy);
+            newWidth = Math.max(minSize, (original.width || 240) - dx);
+            newX = original.position.x + dx;
           }
 
-          // 新しい中心位置を計算して、ノードが拡大縮小時に移動しないようにする
-          const widthDiff = newWidth - (original.width || 240);
-          const heightDiff = newHeight - (original.height || 120);
-          
-          if (handle.includes('w') || handle.includes('n')) {
-            // 左/上からリサイズする場合、ノード位置を調整
-            if (handle.includes('w')) {
-              newX = original.position.x - widthDiff * (cos > 0 ? cos : 0);
-              newY = original.position.y - widthDiff * (sin > 0 ? sin : 0);
-            }
-            if (handle.includes('n')) {
-              newX = original.position.x + heightDiff * (sin > 0 ? sin : 0);
-              newY = original.position.y - heightDiff * (cos > 0 ? cos : 0);
-            }
+          // 下・上
+          if (handle.includes('s')) {
+            newHeight = Math.max(minSize, (original.height || 120) + dy);
+          }
+          if (handle.includes('n')) {
+            newHeight = Math.max(minSize, (original.height || 120) - dy);
+            newY = original.position.y + dy;
           }
 
           setNodes((prev) =>

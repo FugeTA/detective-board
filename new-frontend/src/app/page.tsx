@@ -3,12 +3,13 @@
 import React, { useRef, useEffect } from 'react';
 import { ContextMenu } from '@/components/ContextMenu';
 import { Edge } from '@/components/Edge';
-import { Node } from '@/components/Node';
+import { Node, PIN_OVERLAP } from '@/components/Node';
 import { db } from '@/lib/db';
 import { useBoardInteraction } from '@/hooks/features/useBoardInteraction';
 import { useKeyboardShortcuts } from '@/hooks/features/useKeyboardShortcuts';
 import { useStore } from '@/store/useStore';
 import { v4 as uuidv4 } from 'uuid';
+import styles from './Page.module.css';
 
 export default function Home() {
   const nodes = useStore((state) => state.nodes);
@@ -145,6 +146,13 @@ export default function Home() {
     }
   };
 
+  const handleRotateReset = (nodeId: string) => {
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node) return;
+    pushHistory();
+    setNodes((prev) => prev.map((n) => (n.id === nodeId ? { ...n, rotation: 0 } : n)));
+  };
+
   const handleConnectStart = (e: React.MouseEvent, nodeId: string) => {
     console.log('🟢 Connect handle clicked:', { nodeId });
     e.preventDefault();
@@ -162,9 +170,9 @@ export default function Home() {
       const centerX = width / 2;
       const centerY = height / 2;
       
-      // 接続ハンドルのローカル位置（右側、中央）
-      const handleLocalX = width / 2 + 12;
-      const handleLocalY = 0;
+      // 接続ハンドルのローカル位置（上中央のピン、ノードに少し重ねる）
+      const handleLocalX = 0;
+      const handleLocalY = -height / 2 + PIN_OVERLAP;
       
       // ワールド座標に変換
       const handleWorldX = node.position.x + centerX + handleLocalX * cos - handleLocalY * sin;
@@ -299,17 +307,7 @@ export default function Home() {
 
   return (
     <main
-      style={{
-        position: 'relative',
-        minHeight: '100vh',
-        background: 'var(--bg-color)',
-        backgroundImage: 'var(--board-bg-image)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        overflow: 'hidden',
-        padding: 0,
-        transition: 'background-color 0.3s ease, background-image 0.3s ease',
-      }}
+      className={styles.main}
       onMouseDown={handleBoardMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -319,58 +317,29 @@ export default function Home() {
       }}
     >
       {/* テーマ切り替えボタン */}
-      <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 1000 }}>
-        <button
-          onClick={() => setTheme(theme === 'modern' ? 'retro' : 'modern')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '8px',
-            border: '2px solid var(--accent-color)',
-            background: 'var(--node-bg)',
-            color: 'var(--node-text)',
-            cursor: 'pointer',
-            fontWeight: 'bold',
-            transition: 'all 0.3s ease',
-            fontSize: '14px',
-          }}
-        >
+      <div className={styles.themeToggle}>
+        <button onClick={() => setTheme(theme === 'modern' ? 'retro' : 'modern')}>
           {theme === 'modern' ? '🕵️ Retro' : '💻 Modern'}
         </button>
       </div>
       <div
+        className={styles.board}
         style={{
-          position: 'relative',
-          width: '100%',
-          height: '100vh',
-          overflow: 'hidden',
           cursor: dragInfo && dragInfo.type === 'move' ? 'grabbing' : 'grab',
-          background: 'var(--bg-color)',
           ...backgroundStyle,
         }}
       >
         {/* トランスフォーム適用されたボード全体コンテナ */}
         <div
+          className={styles.transformLayer}
           style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
             transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
-            transformOrigin: '0 0',
-            width: '100%',
-            height: '100%',
           }}
         >
 
           {/* コンテンツ */}
         <div
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            width: '100%',
-            height: '100%',
-            pointerEvents: 'auto',
-          }}
+          className={styles.contentLayer}
         >
           {nodes.map((node) => (
             <div
@@ -384,6 +353,7 @@ export default function Home() {
                   handleResizeHandleMouseDown(e, node.id, handle)
                 }
                 onRotateHandleMouseDown={(e) => handleRotateHandleMouseDown(e, node.id)}
+                onRotateReset={() => handleRotateReset(node.id)}
                 onConnectStart={(e) => handleConnectStart(e, node.id)}
               />
             </div>
@@ -431,15 +401,12 @@ export default function Home() {
           {/* 範囲選択ボックス */}
           {selectionBox && (
             <div
+              className={styles.selectionBox}
               style={{
-                position: 'absolute',
                 left: Math.min(selectionBox.startX, selectionBox.curX),
                 top: Math.min(selectionBox.startY, selectionBox.curY),
                 width: Math.abs(selectionBox.curX - selectionBox.startX),
                 height: Math.abs(selectionBox.curY - selectionBox.startY),
-                border: '1px solid #3b82f6',
-                background: 'rgba(59, 130, 246, 0.1)',
-                pointerEvents: 'none',
               }}
             />
           )}

@@ -2,22 +2,27 @@
 
 import { NodeData, THEME_PRESETS } from '@/types';
 import { useStore } from '@/store/useStore';
+import styles from './Node.module.css';
 
 interface NodeProps {
   node: NodeData;
   isSelected?: boolean;
   onResizeHandleMouseDown?: (e: React.MouseEvent, handle: string) => void;
   onRotateHandleMouseDown?: (e: React.MouseEvent) => void;
+  onRotateReset?: () => void;
   onConnectStart?: (e: React.MouseEvent) => void;
 }
 
 const HANDLE_SIZE = 8;
+const PIN_SIZE = 24;
+export const PIN_OVERLAP = 0; // ピンをノード内に少し重ねる量
 
 export function Node({
   node,
   isSelected = false,
   onResizeHandleMouseDown,
   onRotateHandleMouseDown,
+  onRotateReset,
   onConnectStart,
 }: NodeProps) {
   const theme = useStore((state) => state.theme);
@@ -50,204 +55,139 @@ export function Node({
   const [neX, neY] = rotatePoint(width / 2, -height / 2);
   const [swX, swY] = rotatePoint(-width / 2, height / 2);
 
-  // 回転ハンドル（上部）
-  const [rotateHandleX, rotateHandleY] = rotatePoint(0, -height / 2 - 24);
+  // 回転ハンドル（右上外側、さらに外へ）
+  const [rotateHandleX, rotateHandleY] = rotatePoint(width / 2 + 24, -height / 2 - 16);
 
-  // 接続ハンドル（右側）
-  const [connectHandleX, connectHandleY] = rotatePoint(width / 2 + 12, 0);
+  // 接続ピン（上中央、ノードに重ねる）
+  const [connectHandleX, connectHandleY] = rotatePoint(0, -height / 2 + PIN_OVERLAP);
 
   return (
     <div
+      className={styles.container}
       style={{
-        position: 'absolute',
         left: node.position.x,
         top: node.position.y,
         width,
         height,
-        overflow: 'visible',
+        ['--node-bg' as any]: themeColors.nodeBg,
+        ['--node-text' as any]: themeColors.nodeText,
+        ['--node-border' as any]: themeColors.nodeBorder,
+        ['--node-shadow' as any]: themeColors.nodeShadow,
+        ['--pin-color' as any]: themeColors.pinColor,
+        ['--pin-border' as any]: themeColors.pinBorder,
+        ['--accent-color' as any]: themeColors.accentColor,
+        ['--font-main' as any]: themeColors.fontMain,
       }}
     >
       {/* メインのノード要素（回転は内側で適用） */}
       <div
+        className={`${styles.body} ${isSelected ? styles.bodySelected : ''}`}
         style={{
-          position: 'relative',
-          width: '100%',
-          height: '100%',
-          padding: '12px 14px',
-          border: isSelected ? `2px solid ${themeColors.accentColor}` : themeColors.nodeBorder,
-          borderRadius: 8,
-          background: themeColors.nodeBg,
-          boxShadow: themeColors.nodeShadow,
-          color: themeColors.nodeText,
-          cursor: 'grab',
-          userSelect: 'none',
           transform: `rotate(${rotation}deg)`,
-          transformOrigin: 'center',
-          pointerEvents: 'auto',
-          fontFamily: themeColors.fontMain,
         }}
       >
-        <div
-          style={{
-            fontWeight: 600,
-            fontSize: 16,
-            marginBottom: 8,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            color: themeColors.nodeText,
-          }}
-        >
-          {node.title}
-        </div>
+        <div className={styles.title}>{node.title}</div>
         {node.content ? (
-          <div
-            style={{
-              fontSize: 14,
-              color: themeColors.nodeText,
-              lineHeight: 1.5,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              opacity: 0.8,
-            }}
-          >
-            {node.content}
-          </div>
+          <div className={styles.content}>{node.content}</div>
         ) : (
-          <div style={{ fontSize: 14, color: themeColors.nodeText, opacity: 0.5 }}>No content</div>
+          <div className={styles.contentEmpty}>No content</div>
         )}
       </div>
 
-      {/* コントロールハンドル（回転に追従） */}
+      {/* 回転に追従するハンドル */}
       {isSelected && (
         <>
           {/* SE リサイズ */}
           <div
+            className={`${styles.handle} ${styles.se}`}
             onMouseDown={(e) => {
               console.log('🔵 SE handle mousedown at:', { x: e.clientX, y: e.clientY });
               e.stopPropagation();
               onResizeHandleMouseDown?.(e, 'se');
             }}
             style={{
-              position: 'absolute',
               left: seX - HANDLE_SIZE / 2,
               top: seY - HANDLE_SIZE / 2,
-              width: HANDLE_SIZE,
-              height: HANDLE_SIZE,
               background: HANDLE_COLOR,
-              border: '1px solid white',
-              borderRadius: '50%',
-              cursor: 'se-resize',
-              zIndex: 10,
-              pointerEvents: 'auto',
             }}
           />
           {/* NW リサイズ */}
           <div
+            className={`${styles.handle} ${styles.nw}`}
             onMouseDown={(e) => {
               e.stopPropagation();
               onResizeHandleMouseDown?.(e, 'nw');
             }}
             style={{
-              position: 'absolute',
               left: nwX - HANDLE_SIZE / 2,
               top: nwY - HANDLE_SIZE / 2,
-              width: HANDLE_SIZE,
-              height: HANDLE_SIZE,
               background: HANDLE_COLOR,
-              border: '1px solid white',
-              borderRadius: '50%',
-              cursor: 'nw-resize',
-              zIndex: 10,
-              pointerEvents: 'auto',
             }}
           />
           {/* NE リサイズ */}
           <div
+            className={`${styles.handle} ${styles.ne}`}
             onMouseDown={(e) => {
               e.stopPropagation();
               onResizeHandleMouseDown?.(e, 'ne');
             }}
             style={{
-              position: 'absolute',
               left: neX - HANDLE_SIZE / 2,
               top: neY - HANDLE_SIZE / 2,
-              width: HANDLE_SIZE,
-              height: HANDLE_SIZE,
               background: HANDLE_COLOR,
-              border: '1px solid white',
-              borderRadius: '50%',
-              cursor: 'ne-resize',
-              zIndex: 10,
-              pointerEvents: 'auto',
             }}
           />
           {/* SW リサイズ */}
           <div
+            className={`${styles.handle} ${styles.sw}`}
             onMouseDown={(e) => {
               e.stopPropagation();
               onResizeHandleMouseDown?.(e, 'sw');
             }}
             style={{
-              position: 'absolute',
               left: swX - HANDLE_SIZE / 2,
               top: swY - HANDLE_SIZE / 2,
-              width: HANDLE_SIZE,
-              height: HANDLE_SIZE,
               background: HANDLE_COLOR,
-              border: '1px solid white',
-              borderRadius: '50%',
-              cursor: 'sw-resize',
-              zIndex: 10,
-              pointerEvents: 'auto',
             }}
           />
 
-          {/* 回転ハンドル（上部） */}
+          {/* 回転ハンドル（右上外側） */}
           <div
+            className={styles.rotateHandle}
             onMouseDown={(e) => {
               e.stopPropagation();
               onRotateHandleMouseDown?.(e);
             }}
-            style={{
-              position: 'absolute',
-              left: rotateHandleX - 6,
-              top: rotateHandleY - 6,
-              width: 12,
-              height: 12,
-              background: '#ef4444',
-              border: '2px solid white',
-              borderRadius: '50%',
-              cursor: 'grab',
-              zIndex: 10,
-              pointerEvents: 'auto',
-            }}
-          />
-
-          {/* 接続ハンドル（右側） */}
-          <div
-            onMouseDown={(e) => {
-              console.log('🟢 Connect handle mousedown at:', { x: e.clientX, y: e.clientY });
+            onDoubleClick={(e) => {
               e.stopPropagation();
-              onConnectStart?.(e);
+              onRotateReset?.();
             }}
             style={{
-              position: 'absolute',
-              left: connectHandleX - 5,
-              top: connectHandleY - 5,
-              width: 10,
-              height: 10,
-              background: '#10b981',
-              border: '2px solid white',
-              borderRadius: '50%',
-              cursor: 'crosshair',
-              zIndex: 10,
-              pointerEvents: 'auto',
+              left: rotateHandleX - 12,
+              top: rotateHandleY - 12,
             }}
-          />
+          >
+            <span style={{ fontSize: 12, color: '#444', lineHeight: 1 }}>⟳</span>
+          </div>
+
         </>
       )}
+
+      {/* 接続ハンドル（常時表示・回転追従） */}
+      <div
+        className={styles.connectHandle}
+        onMouseDown={(e) => {
+          console.log('🟢 Connect handle mousedown at:', { x: e.clientX, y: e.clientY });
+          e.stopPropagation();
+          onConnectStart?.(e);
+        }}
+        style={{
+          left: connectHandleX - PIN_SIZE / 2,
+          top: connectHandleY - PIN_SIZE / 2,
+          width: PIN_SIZE,
+          height: PIN_SIZE,
+        }}
+      />
     </div>
   );
 }
