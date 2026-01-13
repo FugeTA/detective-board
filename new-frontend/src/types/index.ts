@@ -72,6 +72,12 @@ export interface NodeData {
   content?: string;
   fileHash?: string;
   metadata?: Record<string, unknown>;
+  // メディアプロパティ
+  imageSrc?: string;
+  audioSrc?: string;
+  videoSrc?: string;
+  pdfSrc?: string;
+  reloadToken?: number;
 }
 
 export interface DragInfo {

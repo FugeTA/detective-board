@@ -3,6 +3,10 @@
 import { NodeData, THEME_PRESETS } from '@/types';
 import { useStore } from '@/store/useStore';
 import styles from './Node.module.css';
+import { ImageContent } from './ImageContent';
+import { AudioContent } from './AudioContent';
+import { VideoContent } from './VideoContent';
+import { PdfContent } from './PdfContent';
 
 interface NodeProps {
   node: NodeData;
@@ -87,10 +91,20 @@ export function Node({
         }}
       >
         <div className={styles.title}>{node.title}</div>
-        {node.content ? (
-          <div className={styles.content}>{node.content}</div>
-        ) : (
-          <div className={styles.contentEmpty}>No content</div>
+        
+        {/* ノードタイプに応じてコンテンツを表示 */}
+        {node.type === 'image' && <ImageContent node={node} />}
+        {node.type === 'audio' && <AudioContent node={node} />}
+        {node.type === 'video' && <VideoContent node={node} />}
+        {node.type === 'pdf' && <PdfContent node={node} />}
+        {node.type === 'text' && (
+          <>
+            {node.content ? (
+              <div className={styles.content}>{node.content}</div>
+            ) : (
+              <div className={styles.contentEmpty}>No content</div>
+            )}
+          </>
         )}
       </div>
 

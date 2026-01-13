@@ -10,6 +10,7 @@ import { useKeyboardShortcuts } from '@/hooks/features/useKeyboardShortcuts';
 import { useStore } from '@/store/useStore';
 import { v4 as uuidv4 } from 'uuid';
 import styles from './Page.module.css';
+import type { NodeType } from '@/types';
 
 export default function Home() {
   const nodes = useStore((state) => state.nodes);
@@ -252,6 +253,43 @@ export default function Home() {
     }
   };
 
+  const handleCreateNode = (type: NodeType, position: { x: number; y: number }) => {
+    pushHistory();
+    
+    // 画面座標をワールド座標に変換
+    const worldX = (position.x - view.x) / view.scale;
+    const worldY = (position.y - view.y) / view.scale;
+    
+    const defaultTitles: Record<NodeType, string> = {
+      text: 'テキストノード',
+      image: '画像ノード',
+      pdf: 'PDFノード',
+      audio: 'オーディオノード',
+      video: 'ビデオノード',
+    };
+
+    const defaultSizes: Record<NodeType, { width: number; height: number }> = {
+      text: { width: 240, height: 120 },
+      image: { width: 300, height: 200 },
+      pdf: { width: 400, height: 500 },
+      audio: { width: 300, height: 100 },
+      video: { width: 400, height: 300 },
+    };
+
+    const newNode = {
+      id: uuidv4(),
+      type,
+      position: { x: worldX, y: worldY },
+      title: defaultTitles[type],
+      width: defaultSizes[type].width,
+      height: defaultSizes[type].height,
+      content: type === 'text' ? 'ここに内容を入力...' : undefined,
+    };
+
+    setNodes((prev) => [...prev, newNode]);
+    setMenu(null);
+  };
+
   useEffect(() => {
     const seedData = async () => {
       const count = await db.nodes.count();
@@ -421,6 +459,7 @@ export default function Home() {
         selectedIds={selectedIds}
         onDelete={handleDeleteFromMenu}
         onDuplicate={handleDuplicate}
+        onCreateNode={handleCreateNode}
       />
     </main>
   );
