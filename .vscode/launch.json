@@ -2,17 +2,16 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "type": "node",
+      "name": "Next.js: Debug Frontend",
+      "type": "chrome",
       "request": "launch",
-      "name": "Launch Frontend",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["start"],
-      "cwd": "${workspaceFolder}/frontend"
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/new-frontend"
     },
     {
       "type": "lldb", // Rustデバッガ（CodeLLDB拡張機能が必要）
       "request": "launch",
-      "name": "Launch Backend",
+      "name": "Rust: Debug Backend",
       "cargo": {
         "args": ["build"], // まずビルドさせる
         "cwd": "${workspaceFolder}/backend"
@@ -25,8 +24,8 @@
   ],
   "compounds": [
     {
-      "name": "Launch Both",
-      "configurations": ["Launch Frontend", "Launch Backend"]
+      "name": "Debug Both",
+      "configurations": ["Next.js: Debug Frontend", "Rust: Debug Backend"]
     }
   ]
 }

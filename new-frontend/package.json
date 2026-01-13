@@ -1,0 +1,40 @@
+{
+  "name": "new-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "dexie-react-hooks": "^4.2.0",
+    "framer-motion": "^12.26.1",
+    "lucide-react": "^0.562.0",
+    "next": "16.1.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-hotkeys-hook": "^5.2.1",
+    "react-pdf": "^10.3.0",
+    "react-textarea-autosize": "^8.5.9",
+    "uuid": "^13.0.0",
+    "zustand": "^5.0.10"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20.19.28",
+    "@types/react": "^19.2.8",
+    "@types/react-dom": "^19.2.3",
+    "@types/uuid": "^10.0.0",
+    "babel-plugin-react-compiler": "1.0.0",
+    "concurrently": "^9.2.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  },
+  "scripts": {
+    "dev": "concurrently \"next dev\" \"npm run rust\"",
+    "rust": "cd ../backend && cargo watch -x run",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  }
+}
