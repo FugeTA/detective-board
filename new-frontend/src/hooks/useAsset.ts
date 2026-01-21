@@ -21,14 +21,24 @@ export function useAsset(src?: string, reloadToken?: number) {
 
     let isMounted = true;
     let objectUrl: string | null = null;
+    const isAsset = src.startsWith('asset://');
+    const cacheKey = isAsset ? src.replace('asset://', '') : src;
 
     const loadAsset = async () => {
       setIsLoading(true);
       try {
-        const cached = await db.pdfCache.get(src);
-        if (cached && isMounted) {
-          objectUrl = URL.createObjectURL(cached.blob);
-          setResolvedSrc(objectUrl);
+        if (isAsset) {
+          const cached = await db.fileContent.get(cacheKey);
+          if (cached && isMounted) {
+            objectUrl = URL.createObjectURL(cached.blob);
+            setResolvedSrc(objectUrl);
+          }
+        } else {
+          const cached = await db.pdfCache.get(src);
+          if (cached && isMounted) {
+            objectUrl = URL.createObjectURL(cached.blob);
+            setResolvedSrc(objectUrl);
+          }
         }
       } catch (e) {
         console.error('Failed to load asset from IDB:', e);

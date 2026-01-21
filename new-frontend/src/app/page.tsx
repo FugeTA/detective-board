@@ -10,7 +10,7 @@ import { useKeyboardShortcuts } from '@/hooks/features/useKeyboardShortcuts';
 import { useStore } from '@/store/useStore';
 import { v4 as uuidv4 } from 'uuid';
 import styles from './Page.module.css';
-import type { NodeType } from '@/types';
+import type { NodeData, NodeType } from '@/types';
 
 export default function Home() {
   const nodes = useStore((state) => state.nodes);
@@ -89,6 +89,7 @@ export default function Home() {
 
   const handleContextMenu = (e: React.MouseEvent, nodeId?: string) => {
     e.preventDefault();
+    e.stopPropagation();
     const worldX = (e.clientX - view.x) / view.scale;
     const worldY = (e.clientY - view.y) / view.scale;
 
@@ -250,6 +251,103 @@ export default function Home() {
         setNodes((prev) => [...prev, newNode]);
         setMenu(null);
       }
+    }
+  };
+
+  const hashBlob = async (blob: Blob) => {
+    const buffer = await blob.arrayBuffer();
+    const digest = await crypto.subtle.digest('SHA-256', buffer);
+    return Array.from(new Uint8Array(digest))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+  };
+
+  const persistAssetToNode = async (node: NodeData, hash: string) => {
+    const assetSrc = `asset://${hash}`;
+    const patch: Partial<NodeData> = {
+      reloadToken: Date.now(),
+      fileHash: hash,
+    };
+
+    switch (node.type) {
+      case 'image':
+        patch.imageSrc = assetSrc;
+        break;
+      case 'audio':
+        patch.audioSrc = assetSrc;
+        break;
+      case 'video':
+        patch.videoSrc = assetSrc;
+        break;
+      case 'pdf':
+        patch.pdfSrc = assetSrc;
+        break;
+      default:
+        break;
+    }
+
+    const updatedNode = { ...node, ...patch };
+    setNodes((prev) => prev.map((n) => (n.id === node.id ? updatedNode : n)));
+    await db.nodes.put(updatedNode);
+  };
+
+  const handleUploadFile = async (nodeId: string, file: File) => {
+    const target = nodes.find((n) => n.id === nodeId);
+    if (!target || target.type === 'text') {
+      alert('このノードではファイルを設定できません');
+      return;
+    }
+
+    try {
+      const hash = await hashBlob(file);
+      await db.fileContent.put({
+        hash,
+        blob: file,
+        mimeType: file.type || 'application/octet-stream',
+        updatedAt: Date.now(),
+      });
+      pushHistory();
+      await persistAssetToNode(target, hash);
+      setMenu(null);
+    } catch (e) {
+      console.error('Failed to save file to IDB:', e);
+      alert('ファイルの保存に失敗しました');
+    }
+  };
+
+  const handleSetNodeLink = async (nodeId: string) => {
+    const target = nodes.find((n) => n.id === nodeId);
+    if (!target || target.type === 'text') {
+      alert('このノードではリンクを設定できません');
+      return;
+    }
+
+    const url = window.prompt('読み込むURLを入力してください');
+    if (!url) return;
+
+    try {
+      // CORS回避のためバックエンド/プロキシ経由で取得
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const cleanBase = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase;
+      const endpoint = target.type === 'pdf' ? 'proxy-pdf' : 'proxy-media';
+      const proxied = `${cleanBase}/api/${endpoint}?url=${encodeURIComponent(url)}&refresh=true`;
+      const res = await fetch(proxied);
+      if (!res.ok) throw new Error(`Status ${res.status}`);
+      const blob = await res.blob();
+      const mimeType = res.headers.get('content-type') || blob.type || 'application/octet-stream';
+      const hash = await hashBlob(blob);
+      await db.fileContent.put({
+        hash,
+        blob,
+        mimeType,
+        updatedAt: Date.now(),
+      });
+      pushHistory();
+      await persistAssetToNode(target, hash);
+      setMenu(null);
+    } catch (e) {
+      console.error('Failed to fetch asset from link:', e);
+      alert('リンクの読み込みに失敗しました');
     }
   };
 
@@ -460,6 +558,8 @@ export default function Home() {
         onDelete={handleDeleteFromMenu}
         onDuplicate={handleDuplicate}
         onCreateNode={handleCreateNode}
+        onSetLink={handleSetNodeLink}
+        onUploadFile={handleUploadFile}
       />
     </main>
   );

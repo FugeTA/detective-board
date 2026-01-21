@@ -1,7 +1,7 @@
 'use client';
 
 import { NodeData } from '@/types';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { db } from '@/lib/db';
 import styles from './PdfContent.module.css';
 
@@ -64,39 +64,49 @@ export function PdfContent({ node, onDoubleClick }: PdfContentProps) {
 
       let blob: Blob | null = null;
 
-      if (!node.reloadToken || node.pdfSrc.startsWith('asset://')) {
+      if (node.pdfSrc.startsWith('asset://')) {
         try {
-          const cached = await db.pdfCache.get(node.pdfSrc);
+          const hash = node.pdfSrc.replace('asset://', '');
+          const cached = await db.fileContent.get(hash);
           if (cached) blob = cached.blob;
         } catch (e) {
           console.error(e);
         }
-      }
-
-      if (!blob && !node.pdfSrc.startsWith('asset://')) {
-        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        const cleanBase = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase;
-        const url = `${cleanBase}/api/proxy-pdf?url=${encodeURIComponent(
-          node.pdfSrc
-        )}${node.reloadToken ? '&refresh=true' : ''}`;
-
-        try {
-          const res = await fetch(url);
-          if (!res.ok) throw new Error(`Status ${res.status}`);
-          blob = await res.blob();
-          if (isMounted) {
-            try {
-              await db.pdfCache.put({
-                url: node.pdfSrc,
-                blob: blob,
-                updatedAt: Date.now(),
-              });
-            } catch (e) {
-              console.warn(e);
-            }
+      } else {
+        if (!node.reloadToken) {
+          try {
+            const cached = await db.pdfCache.get(node.pdfSrc);
+            if (cached) blob = cached.blob;
+          } catch (e) {
+            console.error(e);
           }
-        } catch (e) {
-          console.error(e);
+        }
+
+        if (!blob) {
+          const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+          const cleanBase = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase;
+          const url = `${cleanBase}/api/proxy-pdf?url=${encodeURIComponent(
+            node.pdfSrc
+          )}${node.reloadToken ? '&refresh=true' : ''}`;
+
+          try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`Status ${res.status}`);
+            blob = await res.blob();
+            if (isMounted) {
+              try {
+                await db.pdfCache.put({
+                  url: node.pdfSrc,
+                  blob: blob,
+                  updatedAt: Date.now(),
+                });
+              } catch (e) {
+                console.warn(e);
+              }
+            }
+          } catch (e) {
+            console.error(e);
+          }
         }
       }
 
@@ -117,14 +127,20 @@ export function PdfContent({ node, onDoubleClick }: PdfContentProps) {
     };
   }, [node.pdfSrc, node.reloadToken]);
 
+  const pdfOptions = useMemo(
+    () =>
+      pdfjs
+        ? {
+            cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+            cMapPacked: true,
+          }
+        : undefined,
+    [pdfjs?.version]
+  );
+
   if (!Document || !Page || !pdfjs) {
     return <div className={styles.status}>Loading PDF library...</div>;
   }
-
-  const pdfOptions = {
-    cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
-    cMapPacked: true,
-  };
 
   return (
     <div className={styles.container}>

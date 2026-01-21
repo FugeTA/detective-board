@@ -19,6 +19,7 @@ use sqlx::postgres::PgPoolOptions;
 use crate::models::AppState;
 use crate::handlers::{
     proxy::proxy_pdf_handler,
+    proxy::proxy_media_handler,
     proxy::proxy_storage_asset_handler,
     share::share_case_handler,
     import::import_case_handler,
@@ -63,6 +64,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/api/proxy-pdf", get(proxy_pdf_handler))
+        .route("/api/proxy-media", get(proxy_media_handler))
         .route("/api/storage/{*path}", get(proxy_storage_asset_handler))
         .route("/api/share", post(share_case_handler))
         .route("/api/import/{code}", get(import_case_handler))

@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useRef } from 'react';
 import { NodeData, NodeType } from '@/types';
 
 interface ContextMenu {
@@ -16,6 +17,8 @@ interface ContextMenuProps {
   onDelete: () => void;
   onDuplicate: () => void;
   onCreateNode?: (type: NodeType, position: { x: number; y: number }) => void;
+  onSetLink?: (nodeId: string) => void;
+  onUploadFile?: (nodeId: string, file: File) => void;
 }
 
 export function ContextMenu({
@@ -26,10 +29,45 @@ export function ContextMenu({
   onDelete,
   onDuplicate,
   onCreateNode,
+  onSetLink,
+  onUploadFile,
 }: ContextMenuProps) {
   if (!menu) return null;
 
   const node = menu.nodeId ? nodes.find((n) => n.id === menu.nodeId) : null;
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const acceptMap: Partial<Record<NodeType, string>> = {
+    image: 'image/*',
+    audio: 'audio/*',
+    video: 'video/*',
+    pdf: 'application/pdf',
+  };
+
+  const handleUploadClick = () => {
+    if (!node) return;
+    const input = fileInputRef.current;
+    if (input) {
+      input.value = '';
+      input.click();
+    }
+  };
+
+  const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+    const file = e.target.files?.[0];
+    if (file && node && onUploadFile) {
+      onUploadFile(node.id, file);
+    }
+    e.target.value = '';
+    onClose();
+  };
+
+  const handleSetLink = () => {
+    if (node && onSetLink) {
+      onSetLink(node.id);
+    }
+    onClose();
+  };
 
   // ノードを作成するためのヘルパー関数
   const handleCreateNode = (type: NodeType) => {
@@ -87,6 +125,40 @@ export function ContextMenu({
           overflow: 'hidden',
         }}
       >
+          {node && node.type !== 'text' && (
+            <div
+              style={{
+                padding: '8px 12px',
+                borderBottom: '1px solid #f3f4f6',
+              }}
+            >
+              <button
+                onClick={handleSetLink}
+                style={menuButtonStyle}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.background = '#f3f4f6';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.background = 'none';
+                }}
+              >
+                🔗 リンクから読み込む
+              </button>
+              <button
+                onClick={handleUploadClick}
+                style={menuButtonStyle}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLElement).style.background = '#f3f4f6';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLElement).style.background = 'none';
+                }}
+              >
+                📁 ローカルファイルをアップロード
+              </button>
+            </div>
+          )}
+
         {node && (
           <div
             style={{
@@ -226,6 +298,16 @@ export function ContextMenu({
           </>
         )}
       </div>
+
+      {node && (
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={node.type ? acceptMap[node.type] : undefined}
+          style={{ display: 'none' }}
+          onChange={handleFileChange}
+        />
+      )}
     </>
   );
 }

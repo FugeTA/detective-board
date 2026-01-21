@@ -31,6 +31,36 @@ pub async fn proxy_pdf_handler(Query(params): Query<ProxyParams>) -> impl IntoRe
     }
 }
 
+/// 任意のメディアをプロキシするハンドラ（画像/音声/動画など）
+pub async fn proxy_media_handler(Query(params): Query<ProxyParams>) -> impl IntoResponse {
+    let client = Client::new();
+
+    match client.get(&params.url).send().await {
+        Ok(resp) => {
+            let status = resp.status();
+            let content_type = resp
+                .headers()
+                .get("Content-Type")
+                .and_then(|h| h.to_str().ok())
+                .unwrap_or("application/octet-stream")
+                .to_string();
+
+            let bytes = match resp.bytes().await {
+                Ok(b) => b,
+                Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to read bytes").into_response(),
+            };
+
+            Response::builder()
+                .status(status)
+                .header("Content-Type", content_type)
+                .body(axum::body::Body::from(bytes))
+                .unwrap()
+                .into_response()
+        }
+        Err(_) => (StatusCode::BAD_REQUEST, "Invalid URL").into_response(),
+    }
+}
+
 /// Supabase Storageのアセットをプロキシするハンドラ
 pub async fn proxy_storage_asset_handler(
     State(state): State<Arc<AppState>>,
